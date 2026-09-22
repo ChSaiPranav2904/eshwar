@@ -95,6 +95,54 @@ private String employmentType;
     // Keep the legacy rule score separately so the dashboard can show that ML is actually used.
     private Double ruleRiskScore;
 
+    // ─── Fraud Risk Sub-Scores ────────────────────────────────────────────────────
+    // These fields represent FRAUD risk only — NOT credit/financial risk.
+    // Credit score, income, loan amount, employment type and age are intentionally
+    // excluded from the fraud engine and evaluated separately by the lending team.
+
+    /** Identity verification signals: Aadhaar verified, mobile OTP verified. (0-100) */
+    private Double identityRiskScore;
+
+    /** Device signals: unknown device, device used by multiple identities. (0-100) */
+    private Double deviceRiskScore;
+
+    /** Velocity signals: many applications from same identity / many identities from same device in 24h. (0-100) */
+    private Double velocityRiskScore;
+
+    /** Location/IP signals: high-risk location, IP anomaly. (0-100) */
+    private Double locationRiskScore;
+
+    /**
+     * IsolationForest anomaly score returned by the Python ML service.
+     * Detects novel/unusual behavioral patterns not covered by the supervised classifier.
+     * Higher value = more anomalous. NOT a fraud probability — complementary signal.
+     */
+    private Double anomalyScore;
+
+    /**
+     * Weighted combination of ML fraud probability + behavioral sub-scores.
+     * Formula (weights configurable in application.properties):
+     *   finalFraudRiskScore =
+     *     (weight.ml        * mlFraudProbability * 100)
+     *   + (weight.identity  * identityRiskScore)
+     *   + (weight.device    * deviceRiskScore)
+     *   + (weight.velocity  * velocityRiskScore)
+     *   + (weight.location  * locationRiskScore)
+     * Range: 0-100.
+     */
+    private Double finalFraudRiskScore;
+
+    /** Fraud decision based on finalFraudRiskScore: LOW_RISK | MANUAL_REVIEW | HIGH_RISK */
+    private String fraudDecision;
+
+    /**
+     * JSON array of human-readable fraud risk factor codes, e.g.:
+     * ["UNKNOWN_DEVICE", "CLASSIFIER_REVIEW_THRESHOLD", "UNUSUAL_BEHAVIOUR_REVIEW"]
+     * Used by the admin dashboard to explain the fraud assessment.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String fraudRiskFactors;
+
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     @Column(columnDefinition = "TEXT")
     private String mlAssessment;
@@ -338,6 +386,30 @@ public void setIdDocumentName(String idDocumentName) {
 
     public Double getRuleRiskScore() { return ruleRiskScore; }
     public void setRuleRiskScore(Double ruleRiskScore) { this.ruleRiskScore = ruleRiskScore; }
+
+    public Double getIdentityRiskScore() { return identityRiskScore; }
+    public void setIdentityRiskScore(Double identityRiskScore) { this.identityRiskScore = identityRiskScore; }
+
+    public Double getDeviceRiskScore() { return deviceRiskScore; }
+    public void setDeviceRiskScore(Double deviceRiskScore) { this.deviceRiskScore = deviceRiskScore; }
+
+    public Double getVelocityRiskScore() { return velocityRiskScore; }
+    public void setVelocityRiskScore(Double velocityRiskScore) { this.velocityRiskScore = velocityRiskScore; }
+
+    public Double getLocationRiskScore() { return locationRiskScore; }
+    public void setLocationRiskScore(Double locationRiskScore) { this.locationRiskScore = locationRiskScore; }
+
+    public Double getAnomalyScore() { return anomalyScore; }
+    public void setAnomalyScore(Double anomalyScore) { this.anomalyScore = anomalyScore; }
+
+    public Double getFinalFraudRiskScore() { return finalFraudRiskScore; }
+    public void setFinalFraudRiskScore(Double finalFraudRiskScore) { this.finalFraudRiskScore = finalFraudRiskScore; }
+
+    public String getFraudDecision() { return fraudDecision; }
+    public void setFraudDecision(String fraudDecision) { this.fraudDecision = fraudDecision; }
+
+    public String getFraudRiskFactors() { return fraudRiskFactors; }
+    public void setFraudRiskFactors(String fraudRiskFactors) { this.fraudRiskFactors = fraudRiskFactors; }
 
     public String getMlAssessment() { return mlAssessment; }
     public void setMlAssessment(String mlAssessment) { this.mlAssessment = mlAssessment; }

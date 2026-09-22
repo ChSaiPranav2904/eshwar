@@ -48,17 +48,31 @@ public class LoanApplicationController {
     }
 
     private Map<String, Object> customerView(LoanApplication application) {
+        // Translate internal status to a customer-friendly fraud screening message.
+        // IMPORTANT: Internal ML probabilities, model version, and fraud scores
+        // are NEVER exposed to customers — only to admin/analyst users.
+        String statusRaw = application.getStatus() == null ? "UNDER_FRAUD_REVIEW" : application.getStatus();
+        String fraudScreeningStatus = switch (statusRaw) {
+            case "CLEARED_FOR_CREDIT_PROCESSING" -> "Fraud screening completed — application is being processed";
+            case "UNDER_FRAUD_REVIEW"             -> "Fraud screening in progress — under review";
+            case "HELD_FOR_INVESTIGATION"         -> "Application on hold — additional verification required";
+            default                               -> "Application submitted — under review";
+        };
+
         return Map.ofEntries(
-                Map.entry("id", application.getId()),
-                Map.entry("applicationId", "FS-2026-" + String.format("%05d", application.getId())),
-                Map.entry("fullName", application.getFullName()),
-                Map.entry("loanAmount", application.getLoanAmount()),
-                Map.entry("loanPurpose", application.getLoanPurpose()),
-                Map.entry("submittedDate", application.getCreatedAt()),
-                Map.entry("status", application.getStatus() == null ? "SUBMITTED" : application.getStatus()),
-                Map.entry("identityVerified", Boolean.TRUE.equals(application.getIdentityVerified())),
-                Map.entry("mobileVerified", Boolean.TRUE.equals(application.getMobileVerified())),
-                Map.entry("maskedAadhaar", application.getMaskedAadhaar() == null ? "XXXX XXXX" : application.getMaskedAadhaar())
+                Map.entry("id",                   application.getId()),
+                Map.entry("applicationId",        "FS-2026-" + String.format("%05d", application.getId())),
+                Map.entry("fullName",             application.getFullName()),
+                Map.entry("loanAmount",           application.getLoanAmount()),
+                Map.entry("loanPurpose",          application.getLoanPurpose()),
+                Map.entry("submittedDate",        application.getCreatedAt()),
+                // User-facing status — never exposes fraud decision or ML internals
+                Map.entry("status",               statusRaw),
+                Map.entry("fraudScreeningStatus", fraudScreeningStatus),
+                // Identity verification result shown to customer (they went through the flow)
+                Map.entry("identityVerified",     Boolean.TRUE.equals(application.getIdentityVerified())),
+                Map.entry("mobileVerified",       Boolean.TRUE.equals(application.getMobileVerified())),
+                Map.entry("maskedAadhaar",        application.getMaskedAadhaar() == null ? "XXXX XXXX" : application.getMaskedAadhaar())
         );
     }
 }

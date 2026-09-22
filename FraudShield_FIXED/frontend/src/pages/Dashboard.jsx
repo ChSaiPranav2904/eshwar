@@ -39,41 +39,45 @@ function Dashboard() {
     loadApplications();
   }, [loadApplications]);
 
-  const reviewCount = applications.filter(app => app.decision === "MANUAL_REVIEW").length;
-  const lowRiskCount = applications.filter(app => app.decision === "LOW_RISK").length;
-  const highRiskCount = applications.filter(app => app.decision === "HIGH_RISK").length;
-  const avgRisk = applications.length > 0
-    ? (applications.reduce((sum, app) => sum + (app.riskScore || 0), 0) / applications.length).toFixed(1)
+  // Use fraudDecision (new field) with fallback to decision (legacy)
+  const getDecision = (app) => app.fraudDecision || app.decision || "UNKNOWN";
+
+  const reviewCount  = applications.filter(app => getDecision(app) === "MANUAL_REVIEW").length;
+  const lowRiskCount = applications.filter(app => getDecision(app) === "LOW_RISK").length;
+  const highRiskCount = applications.filter(app => getDecision(app) === "HIGH_RISK").length;
+  const avgFraudRisk = applications.length > 0
+    ? (applications.reduce((sum, app) => sum + (app.finalFraudRiskScore ?? app.riskScore ?? 0), 0) / applications.length).toFixed(1)
     : 0;
 
   const chartData = [
-    { name: "Low Risk", value: lowRiskCount },
+    { name: "Low Risk",      value: lowRiskCount },
     { name: "Manual Review", value: reviewCount },
-    { name: "High Risk", value: highRiskCount },
+    { name: "High Risk",     value: highRiskCount },
   ];
 
   const riskDistribution = [
-    { range: "0-20", count: applications.filter(a => a.riskScore <= 20).length },
-    { range: "21-40", count: applications.filter(a => a.riskScore > 20 && a.riskScore <= 40).length },
-    { range: "41-70", count: applications.filter(a => a.riskScore > 40 && a.riskScore <= 70).length },
-    { range: "71-100", count: applications.filter(a => a.riskScore > 70).length },
+    { range: "0-20",  count: applications.filter(a => (a.finalFraudRiskScore ?? a.riskScore ?? 0) <= 20).length },
+    { range: "21-40", count: applications.filter(a => { const s = a.finalFraudRiskScore ?? a.riskScore ?? 0; return s > 20 && s <= 40; }).length },
+    { range: "41-65", count: applications.filter(a => { const s = a.finalFraudRiskScore ?? a.riskScore ?? 0; return s > 40 && s <= 65; }).length },
+    { range: "66-100", count: applications.filter(a => (a.finalFraudRiskScore ?? a.riskScore ?? 0) > 65).length },
   ];
 
   const filteredApplications = applications.filter((app) => {
     const matchesSearch = app.fullName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterType === "all" ? true
-      : filterType === "approved" ? app.decision === "APPROVED"
-      : filterType === "low" ? app.decision === "LOW_RISK"
-      : filterType === "high" ? app.decision === "HIGH_RISK"
-      : filterType === "pending" ? app.status === "UNDER_REVIEW"
-      : app.decision === "MANUAL_REVIEW";
+    const dec = getDecision(app);
+    const matchesFilter = filterType === "all"    ? true
+      : filterType === "low"    ? dec === "LOW_RISK"
+      : filterType === "high"   ? dec === "HIGH_RISK"
+      : filterType === "pending" ? app.status === "UNDER_FRAUD_REVIEW"
+      : filterType === "held"    ? app.status === "HELD_FOR_INVESTIGATION"
+      : dec === "MANUAL_REVIEW";
     return matchesSearch && matchesFilter;
   });
 
   return (
     <div className="dashboard-page">
       <nav className="dashboard-nav glass-card">
-        <h2>🏦 Loan Risk Dashboard</h2>
+        <h2>🛡️ FraudShield AI Dashboard</h2>
         <div className="nav-actions">
           <Link to="/" className="nav-link">Home</Link>
           <Link to="/loan" className="nav-link">Apply Loan</Link>
@@ -83,8 +87,8 @@ function Dashboard() {
       </nav>
 
       <header className="dashboard-header">
-        <h1>Loan Risk Assessment Dashboard</h1>
-        <p>Real-time monitoring of loan applications</p>
+        <h1>Fraud Assessment Dashboard</h1>
+        <p>Real-time fraud risk monitoring — Powered by HistGradientBoosting ML + IsolationForest</p>
       </header>
 
       {error ? (
@@ -105,22 +109,22 @@ function Dashboard() {
       ) : (
         <>
           <div className="stats-container">
-            <Card title="📄 Applications" value={applications.length} />
-            <Card title="Low Risk" value={lowRiskCount} />
-            <Card title="⚠ Manual Review" value={reviewCount} />
-            <Card title="High Risk" value={highRiskCount} />
-            <Card title="📊 Avg Risk" value={avgRisk} />
+            <Card title="📄 Applications"   value={applications.length} />
+            <Card title="✅ Low Fraud Risk"  value={lowRiskCount} />
+            <Card title="⚠ Manual Review"   value={reviewCount} />
+            <Card title="🚨 High Risk"       value={highRiskCount} />
+            <Card title="📊 Avg Fraud Risk"  value={`${avgFraudRisk}%`} />
           </div>
 
           <div className="charts-container">
             <div className="chart-card glass-card">
-              <h3>📊 Loan Decisions</h3>
+              <h3>📊 Fraud Decisions</h3>
               <ResponsiveContainer width="100%" height="90%">
                 <PieChart>
                   <Pie data={chartData} dataKey="value" outerRadius={100} label>
                     <Cell fill="#10b981" />
-                    <Cell fill="#ef4444" />
                     <Cell fill="#f59e0b" />
+                    <Cell fill="#ef4444" />
                   </Pie>
                   <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px' }} />
                 </PieChart>
@@ -128,7 +132,7 @@ function Dashboard() {
             </div>
 
             <div className="chart-card glass-card">
-              <h3>📈 Risk Distribution</h3>
+              <h3>📈 Fraud Risk Distribution</h3>
               <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={riskDistribution}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -155,10 +159,11 @@ function Dashboard() {
               className="filter-select"
             >
               <option value="all">All Applications</option>
-              <option value="low">Low Risk</option>
+              <option value="low">Low Fraud Risk</option>
               <option value="review">Manual Review</option>
               <option value="high">High Risk</option>
-              <option value="pending">Pending</option>
+              <option value="pending">Under Review</option>
+              <option value="held">Held for Investigation</option>
             </select>
             <button onClick={loadApplications} className="btn-primary">Refresh</button>
           </div>
@@ -170,15 +175,14 @@ function Dashboard() {
                   <tr>
                     <th>ID</th>
                     <th>Name</th>
-                    <th>Income</th>
-                    <th>Loan</th>
-                    <th>Credit</th>
-                    <th>Employment</th>
-                    <th>Rule Risk</th>
-                    <th>ML Fraud</th>
-                    <th>Final Risk</th>
+                    <th>Loan Amount</th>
+                    <th>ML Fraud Prob</th>
+                    <th>Anomaly Score</th>
+                    <th>Identity Risk</th>
+                    <th>Device Risk</th>
+                    <th>Final Fraud Score</th>
                     <th>Source</th>
-                    <th>Decision</th>
+                    <th>Fraud Decision</th>
                     <th>Identity</th>
                     <th>Status</th>
                     <th>View</th>
@@ -189,25 +193,30 @@ function Dashboard() {
                     <tr key={app.id}>
                       <td>{app.id}</td>
                       <td className="font-medium">{app.fullName}</td>
-                      <td>₹{app.annualIncome?.toLocaleString()}</td>
                       <td>₹{app.loanAmount?.toLocaleString()}</td>
-                      <td>{app.creditScore}</td>
-                      <td>{app.employmentType}</td>
-                      <td>{app.ruleRiskScore ?? app.riskScore}</td>
                       <td>
                         {app.mlFraudProbability == null
                           ? "N/A"
                           : `${(app.mlFraudProbability * 100).toFixed(2)}%`}
                       </td>
-                      <td className="font-bold">{app.riskScore}</td>
+                      <td>
+                        {app.anomalyScore == null
+                          ? "N/A"
+                          : app.anomalyScore.toFixed(4)}
+                      </td>
+                      <td>{app.identityRiskScore != null ? app.identityRiskScore.toFixed(0) : "—"}</td>
+                      <td>{app.deviceRiskScore != null ? app.deviceRiskScore.toFixed(0) : "—"}</td>
+                      <td className="font-bold">
+                        {(app.finalFraudRiskScore ?? app.riskScore ?? "—")}
+                      </td>
                       <td className="text-xs">{app.decisionSource || "RULES"}</td>
                       <td>
-                        <span className={`badge badge-${app.decision?.toLowerCase()}`}>
-                          {app.decision}
+                        <span className={`badge badge-${getDecision(app)?.toLowerCase().replace("_", "-")}`}>
+                          {getDecision(app)?.replace(/_/g, " ")}
                         </span>
                       </td>
-                      <td>{app.identityVerified ? "Verified" : "Pending"}</td>
-                      <td>{app.status}</td>
+                      <td>{app.identityVerified ? "✓ Verified" : "✗ Pending"}</td>
+                      <td>{app.status?.replace(/_/g, " ")}</td>
                       <td>
                         <Link to={`/dashboard/${app.id}`} className="btn-review">View</Link>
                       </td>
@@ -220,6 +229,15 @@ function Dashboard() {
                 <p>No applications found.</p>
               </div>
             )}
+          </div>
+
+          <div className="glass-card" style={{ padding: "16px 24px", marginTop: "16px", fontSize: "12px", color: "var(--text-muted)", lineHeight: "1.6" }}>
+            <strong>ℹ️ Fraud Assessment Note:</strong> The Fraud Risk Score is driven primarily by the
+            <strong> HistGradientBoosting ML model</strong> (weight 0.55) with supporting behavioral signals.
+            Credit score, income, and employment type are <strong>NOT</strong> fraud indicators — they are
+            evaluated separately by the lending team.
+            A low fraud risk score means <em>"No significant fraud indicators detected."</em>
+            It does <strong>NOT</strong> mean <em>"Loan approved."</em>
           </div>
         </>
       )}

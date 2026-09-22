@@ -146,10 +146,9 @@ function LoanForm() {
     }
   };
 
-  const score = Number(formData.creditScore) || 0;
-  const estimatedRisk = score >= 750 ? "LOW RISK" : score >= 650 ? "MEDIUM RISK" : "HIGH RISK";
-  const riskColor = estimatedRisk === "LOW RISK" ? "var(--success)" : estimatedRisk === "MEDIUM RISK" ? "var(--warning)" : "var(--danger)";
-  
+  const identityBadgeColor = "var(--success)";
+
+
   if (showResults && mlResult) {
     const decisionColor = "var(--warning)";
 
@@ -168,7 +167,7 @@ function LoanForm() {
           </div>
           
           <div style={{ textAlign: 'center', padding: '20px 40px', color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.7' }}>
-            <p>Your application has been successfully submitted. Our verification system is reviewing the information provided. You can track the status from My Applications.</p>
+            <p>Your application has been successfully submitted. Our fraud screening system is reviewing the information provided. You can track the status from My Applications.</p>
           </div>
 
           <div className="results-grid" style={{ maxWidth: '500px', margin: '0 auto' }}>
@@ -188,11 +187,13 @@ function LoanForm() {
               </div>
               <div className="detail-row">
                 <span>Identity</span>
-                <span className="source-badge" style={{ color: "var(--success)" }}>{mlResult.identityVerified ? "Verified" : "Pending"}</span>
+                <span className="source-badge" style={{ color: "var(--success)" }}>{mlResult.identityVerified ? "✅ Verified" : "⏳ Pending"}</span>
               </div>
               <div className="detail-row">
-                <span>Application Status</span>
-                <span className="source-badge" style={{ color: decisionColor }}>{mlResult.status?.replace(/_/g, ' ') || 'PENDING'}</span>
+                <span>Fraud Screening</span>
+                <span className="source-badge" style={{ color: identityBadgeColor }}>
+                  {mlResult.fraudScreeningStatus || mlResult.status?.replace(/_/g, ' ') || 'Under Review'}
+                </span>
               </div>
             </div>
           </div>
@@ -224,8 +225,8 @@ function LoanForm() {
             <span className={step >= 4 ? 'active' : ''}>Review</span>
           </div>
         </div>
-        <h1>Smart Loan Eligibility</h1>
-        <p className="subtitle">AI Powered Credit Evaluation & Fraud Detection</p>
+        <h1>Loan Application</h1>
+        <p className="subtitle">Secure application with ML-powered fraud screening &amp; identity verification</p>
       </div>
 
       <div className="loan-container">
@@ -372,48 +373,69 @@ function LoanForm() {
           </div>
         </div>
 
-        {/* Live Sidebar Preview */}
+        {/* Identity & Security Sidebar */}
         <div className="preview-card glass-card">
-          <h2>🤖 AI Risk Preview</h2>
-          <div className="gauge-wrapper">
-            <CircularProgressbar
-              value={score}
-              maxValue={900}
-              text={`${score || 0}`}
-              styles={buildStyles({
-                textSize: "18px",
-                pathColor: riskColor,
-                textColor: riskColor,
-                trailColor: "var(--border-glass)",
-                strokeLinecap: "round",
-              })}
+          <h2>🔒 Identity &amp; Security</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            The following checks are performed automatically during your application.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <SecurityCheck
+              done={true}
+              label="Identity Verified (Aadhaar)"
+              sublabel="Demo KYC — OCR extraction + manual check"
+            />
+            <SecurityCheck
+              done={true}
+              label="Mobile OTP Verified"
+              sublabel="One-time password sent to registered number"
+            />
+            <SecurityCheck
+              done={!!formData.city && !!formData.state}
+              label="Location captured"
+              sublabel={formData.city && formData.state ? `${formData.city}, ${formData.state}` : "Fill city/state in Step 1"}
+            />
+            <SecurityCheck
+              done={true}
+              label="Device fingerprint collected"
+              sublabel="Browser device ID captured automatically"
+            />
+            <SecurityCheck
+              done={true}
+              label="Behavioral signals captured"
+              sublabel="Application velocity &amp; session data for ML model"
             />
           </div>
-          
-          <div className="prediction-box" style={{ borderColor: riskColor, boxShadow: `0 0 20px ${riskColor}20` }}>
-            <div className="prediction-label">ESTIMATED RISK</div>
-            <div className="prediction-value" style={{ color: riskColor }}>
-              {estimatedRisk}
-            </div>
-          </div>
-          
-          <div className="live-stats">
-            <div className="stat-row">
-              <span>Loan to Income</span>
-              <strong>
-                {formData.annualIncome && formData.loanAmount 
-                  ? ((Number(formData.loanAmount) / Number(formData.annualIncome)) * 100).toFixed(1) + '%'
-                  : '0%'}
-              </strong>
-            </div>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ 
-                width: `${Math.min(((Number(formData.loanAmount) / Number(formData.annualIncome)) * 100) || 0, 100)}%`,
-                background: 'var(--info)'
-              }}></div>
-            </div>
+
+          <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(59,130,246,0.08)', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+              <strong style={{ color: 'var(--info)' }}>ℹ️ How fraud screening works:</strong><br/>
+              Our HistGradientBoosting ML model analyzes behavioral signals — not your credit score — to detect fraud.
+              Your financial details are evaluated <em>separately</em> by the lending team.
+            </p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SecurityCheck({ done, label, sublabel }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+      <span style={{
+        width: "22px", height: "22px", borderRadius: "50%",
+        background: done ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.08)",
+        border: `2px solid ${done ? "var(--success)" : "var(--border-glass)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "12px", flexShrink: 0, marginTop: "2px"
+      }}>
+        {done ? "✓" : "○"}
+      </span>
+      <div>
+        <div style={{ fontSize: "13px", fontWeight: 600, color: done ? "var(--text-primary)" : "var(--text-muted)" }}>{label}</div>
+        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{sublabel}</div>
       </div>
     </div>
   );

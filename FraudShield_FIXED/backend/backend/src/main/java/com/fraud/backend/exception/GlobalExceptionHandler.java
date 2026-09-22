@@ -33,8 +33,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ModelUnavailableException.class)
     public ResponseEntity<Map<String, String>> handleModelUnavailable(ModelUnavailableException ex) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Map.of("error", "MODEL_UNAVAILABLE", "detail", ex.getMessage()));
+        // Fallback is handled in FraudModelClient (routes to MANUAL_REVIEW with
+        // decisionSource=RULE_FALLBACK_ML_UNAVAILABLE). This handler is a safety net.
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(Map.of("error", "ML_UNAVAILABLE",
+                             "detail", ex.getMessage(),
+                             "fallback", "Application routed to MANUAL_REVIEW"));
     }
 
     @ExceptionHandler(RuntimeException.class)

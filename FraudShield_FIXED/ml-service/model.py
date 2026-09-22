@@ -1,4 +1,57 @@
-"""Shared feature contract, calibrated classifier and review policy. No PII features."""
+"""
+FraudShield ML — Feature contract, calibrated classifier, anomaly detector, and review policy.
+
+═══════════════════════════════════════════════════════════════════════════════════
+ARCHITECTURE: TWO-MODEL FRAUD DETECTION APPROACH
+═══════════════════════════════════════════════════════════════════════════════════
+
+PRIMARY ENGINE — HistGradientBoostingClassifier (calibrated):
+  Learns known fraud patterns from labelled historical data.
+  Produces a calibrated fraud probability (0–1) for each application.
+  Trained with identity-grouped splits to prevent leakage between identities.
+  This is the PRIMARY driver of the fraud decision (weight = 0.55 by default).
+
+CALIBRATION — CalibratedClassifierCV (sigmoid method):
+  Wraps a FrozenEstimator around the trained HistGradientBoosting classifier.
+  Sigmoid calibration maps raw classifier scores to well-calibrated probabilities,
+  ensuring that p=0.30 genuinely means ~30% of such cases are fraudulent.
+  Reduces overconfident predictions and false positives.
+
+ANOMALY DETECTOR — IsolationForest:
+  Trained only on LEGITIMATE cases (label=0).
+  Detects behavioural patterns that are unusual or novel — potential new fraud
+  vectors that the supervised classifier has not yet seen in training data.
+  Returns an anomaly score (higher = more anomalous). This is NOT a fraud probability;
+  it is a complementary signal that surfaces outliers for analyst review.
+  IsolationForest flags → UNUSUAL_BEHAVIOUR_REVIEW reason code.
+
+MISSING TELEMETRY HANDLING:
+  All features use -1 to represent missing/unavailable telemetry.
+  The model never fabricates normal-looking values for missing inputs.
+  ≥ 4 missing features → INSUFFICIENT_TELEMETRY flag → forced MANUAL_REVIEW.
+
+WHAT THIS MODEL DOES NOT USE (intentional):
+  Credit score, annual income, loan amount, existing loans, employment type, age.
+  These are credit-worthiness variables evaluated separately by the lending team.
+  Including them in the fraud model would conflate credit risk with fraud risk.
+
+RETRAINING:
+  Feedback-driven controlled periodic retraining — NOT continuous online learning.
+  Human analysts confirm outcomes (0=legitimate, 1=confirmed fraud).
+  Candidate model promoted only if evaluation gates pass:
+    - FPR cap ≤ 3%
+    - FPR Wilson upper 95% ≤ 10%
+    - FPR non-regression vs champion
+    - Recall non-regression vs champion
+    - Anchor set FPR and recall checks
+    - Brier score non-regression
+    - Useful improvement criterion
+
+NO PII IN FEATURES:
+  All features are behavioral signals hashed/counted server-side.
+  No personally identifiable information (name, Aadhaar, phone) is used.
+═══════════════════════════════════════════════════════════════════════════════════
+"""
 import hashlib
 import json
 import math
@@ -12,11 +65,15 @@ from sklearn.ensemble import HistGradientBoostingClassifier, IsolationForest
 from sklearn.frozen import FrozenEstimator
 from sklearn.metrics import average_precision_score, brier_score_loss, confusion_matrix
 
+# ── Feature contract ──────────────────────────────────────────────────────────
+# Only behavioral/identity signals — NO credit signals.
+# identityApplications24h and deviceIdentities24h are velocity features computed
+# by the Engine from its internal prediction history (not sent by the client).
 FEATURES = ["deviceUnknown", "locationRisk", "identityApplications24h",
             "deviceIdentities24h", "sessionSeconds", "failedLogins24h", "ipChanged"]
 LIMITS = [(0, 1), (0, 2), (0, 10000), (0, 10000), (0, 86400), (0, 10000), (0, 1)]
 SCHEMA = "fraud-behaviour-v1"
-TARGET_FPR = 0.03
+TARGET_FPR = 0.03  # Maximum acceptable false positive rate during model selection
 
 
 def vector(data):
