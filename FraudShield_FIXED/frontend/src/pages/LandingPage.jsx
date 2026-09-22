@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import "./LandingPage.css";
 
 function LandingPage() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <div className="landing-page">
@@ -15,7 +15,7 @@ function LandingPage() {
         <div className="nav-links">
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard" className="nav-link">Dashboard</Link>
+              {isAdmin && <Link to="/dashboard" className="nav-link">Dashboard</Link>}
               <Link to="/loan" className="nav-link">Apply for Loan</Link>
               <button onClick={logout} className="btn-secondary">Logout</button>
             </>
@@ -39,12 +39,12 @@ function LandingPage() {
             Detect Fraud • Analyze Risk • Approve Loans
           </p>
           <div className="hero-actions animate-fade-in-up delay-2">
-            {isAuthenticated ? (
-              <Link to="/dashboard" className="btn-primary btn-large">Open Dashboard</Link>
+            <Link to="/loan" className="btn-primary btn-large">Apply For Loan</Link>
+            {isAuthenticated && isAdmin ? (
+              <Link to="/dashboard" className="btn-outline btn-large">Open Dashboard</Link>
             ) : (
-              <Link to="/login" className="btn-primary btn-large">Admin Login</Link>
+              <Link to="/login" className="btn-outline btn-large">Sign In</Link>
             )}
-            <Link to="/loan" className="btn-outline btn-large">Apply For Loan</Link>
           </div>
         </div>
         <div className="hero-background">

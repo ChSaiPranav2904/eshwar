@@ -23,8 +23,8 @@ export const AuthProvider = ({ children }) => {
           toast.error('Session expired');
         } else {
           setUser({
-            email: decodedPayload.sub,
-            roles: decodedPayload.roles
+            username: decodedPayload.sub,
+            role: decodedPayload.role || ''
           });
         }
       } catch (e) {
@@ -47,8 +47,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const isAdmin = user?.role === 'ROLE_ADMIN';
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

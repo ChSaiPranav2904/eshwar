@@ -24,19 +24,12 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="ADMIN">
                 <Dashboard />
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/loan"
-            element={
-              <ProtectedRoute>
-                <LoanForm />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/loan" element={<LoanForm />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

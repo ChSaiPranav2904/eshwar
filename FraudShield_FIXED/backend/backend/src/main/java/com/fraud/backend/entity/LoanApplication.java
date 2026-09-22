@@ -45,9 +45,18 @@ private Integer existingLoans;
     @NotBlank(message = "Employment Type is required")
 private String employmentType;
 
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private String deviceKnown;
 
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private String locationRisk;
+
+    private String city;
+
+    private String state;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String applicantIp;
 
     @NotBlank(message = "Loan Purpose is required")
     private String loanPurpose;
@@ -195,6 +204,30 @@ private String employmentType;
 
     public void setLocationRisk(String locationRisk) {
         this.locationRisk = locationRisk;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getApplicantIp() {
+        return applicantIp;
+    }
+
+    public void setApplicantIp(String applicantIp) {
+        this.applicantIp = applicantIp;
     }
 
     public String getLoanPurpose() {

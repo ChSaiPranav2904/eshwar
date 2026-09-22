@@ -28,6 +28,34 @@ public class LoanApplicationService {
     }
 
     public LoanApplication createApplication(LoanApplication application, HttpServletRequest servletRequest) {
+        String clientIp = servletRequest.getHeader("X-Forwarded-For");
+        if (clientIp == null || clientIp.isBlank()) {
+            clientIp = servletRequest.getRemoteAddr();
+        } else {
+            clientIp = clientIp.split(",")[0].trim();
+        }
+        application.setApplicantIp(clientIp);
+
+        String userAgent = servletRequest.getHeader("User-Agent");
+        if (userAgent == null || userAgent.isBlank() || userAgent.length() < 10) {
+            application.setDeviceKnown("NO");
+        } else {
+            application.setDeviceKnown("YES");
+        }
+
+        String locationRiskLevel = "LOW";
+        String city = application.getCity();
+        String state = application.getState();
+
+        if (city == null || city.isBlank() || state == null || state.isBlank()) {
+            locationRiskLevel = "HIGH";
+        } else if (clientIp.startsWith("127.") || clientIp.equals("0:0:0:0:0:0:0:1") || clientIp.equals("::1")) {
+            locationRiskLevel = "LOW";
+        } else {
+            locationRiskLevel = "MEDIUM";
+        }
+        application.setLocationRisk(locationRiskLevel);
+
         double risk = 0;
 
         if (application.getCreditScore() != null) {
@@ -102,6 +130,9 @@ Analyze this loan application.
 
 Applicant Name: %s
 Age: %d
+City: %s
+State: %s
+Applicant IP: %s
 Annual Income: %.2f
 Loan Amount: %.2f
 Credit Score: %d
@@ -125,9 +156,13 @@ Provide:
 4. Fraud Indicators (if any)
 5. Final Recommendation
 
-Keep the response professional and easy to understand.
+        Keep the response professional and easy to understand.
 """.formatted(
-                app.getFullName(), app.getAge(), app.getAnnualIncome(), app.getLoanAmount(),
+                app.getFullName(), app.getAge(),
+                app.getCity() != null ? app.getCity() : "N/A",
+                app.getState() != null ? app.getState() : "N/A",
+                app.getApplicantIp() != null ? app.getApplicantIp() : "N/A",
+                app.getAnnualIncome(), app.getLoanAmount(),
                 app.getCreditScore(), app.getEmploymentType(), app.getExistingLoans(),
                 app.getDeviceKnown(), app.getLocationRisk(),
                 app.getRuleRiskScore() == null ? app.getRiskScore() : app.getRuleRiskScore(),

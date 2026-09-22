@@ -4,6 +4,7 @@ import "react-circular-progressbar/dist/styles.css";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import "./LoanForm.css";
 
 function LoanForm() {
@@ -12,6 +13,7 @@ function LoanForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [mlResult, setMlResult] = useState(null);
+  const { isAdmin, isAuthenticated } = useAuth();
 
   // Form State
   const [formData, setFormData] = useState({
@@ -30,9 +32,9 @@ function LoanForm() {
     employmentType: "",
     loanPurpose: "",
     
-    // Hidden behavioral signals for demo
-    deviceKnown: "YES",
-    locationRisk: "LOW"
+    // Location fields
+    city: "",
+    state: ""
   });
 
   const handleChange = (e) => {
@@ -43,7 +45,7 @@ function LoanForm() {
   const validateStep = (currentStep) => {
     switch(currentStep) {
       case 1:
-        if (!formData.fullName || !formData.email || !formData.age || !formData.nationalIdType || !formData.nationalIdNumber) {
+        if (!formData.fullName || !formData.email || !formData.age || !formData.nationalIdType || !formData.nationalIdNumber || !formData.city || !formData.state) {
           toast.error("Please fill all personal info fields");
           return false;
         }
@@ -125,7 +127,7 @@ function LoanForm() {
     setFormData({
       fullName: "", email: "", age: "", nationalIdType: "", nationalIdNumber: "", nationality: "INDIAN",
       annualIncome: "", loanAmount: "", creditScore: "", existingLoans: "",
-      employmentType: "", loanPurpose: "", deviceKnown: "YES", locationRisk: "LOW"
+      employmentType: "", loanPurpose: "", city: "", state: ""
     });
   };
 
@@ -134,80 +136,157 @@ function LoanForm() {
   const riskColor = estimatedRisk === "LOW RISK" ? "var(--success)" : estimatedRisk === "MEDIUM RISK" ? "var(--warning)" : "var(--danger)";
   
   if (showResults && mlResult) {
-    const mlPercent = mlResult.mlFraudProbability == null ? "N/A" : `${(mlResult.mlFraudProbability * 100).toFixed(1)}%`;
     const decisionColor = mlResult.decision === "APPROVED" ? "var(--success)" : mlResult.decision === "REJECTED" ? "var(--danger)" : "var(--warning)";
-    
+    const decisionIcon = mlResult.decision === "APPROVED" ? "✅" : mlResult.decision === "REJECTED" ? "❌" : "⏳";
+    const decisionMessage = mlResult.decision === "APPROVED" 
+      ? "Your loan application has been approved! You will receive further details via email shortly."
+      : mlResult.decision === "REJECTED"
+      ? "Unfortunately, your application could not be approved at this time. You may reapply after addressing the risk factors."
+      : "Your application requires additional review by our team. We will contact you within 2-3 business days.";
+
+    // ─── ADMIN VIEW: Full ML Breakdown ───
+    if (isAdmin) {
+      const mlPercent = mlResult.mlFraudProbability == null ? "N/A" : `${(mlResult.mlFraudProbability * 100).toFixed(1)}%`;
+      return (
+        <div className="loan-page">
+          <div className="results-container glass-card">
+            <div className="results-header">
+              <h2>🔬 Admin Analysis View</h2>
+              <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}` }}>
+                {mlResult.decision}
+              </div>
+            </div>
+            
+            <div className="results-grid">
+              <div className="result-card">
+                <h4>ML Fraud Probability</h4>
+                <div className="gauge-container">
+                  <CircularProgressbar 
+                    value={mlResult.mlFraudProbability * 100 || 0} 
+                    text={mlPercent}
+                    styles={buildStyles({
+                      pathColor: mlResult.mlFraudProbability > 0.5 ? 'var(--danger)' : 'var(--success)',
+                      textColor: 'var(--text-primary)',
+                      trailColor: 'var(--border-glass)'
+                    })}
+                  />
+                </div>
+                <p className="recommendation">ML Says: <strong style={{ color: mlResult.mlRecommendation === 'NO_FRAUD_ALERT' ? 'var(--success)' : 'var(--danger)' }}>{mlResult.mlRecommendation}</strong></p>
+              </div>
+              
+              <div className="result-details">
+                <h3>Decision Breakdown</h3>
+                <div className="detail-row">
+                  <span>Final Risk Score</span>
+                  <strong>{mlResult.riskScore} / 100</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Rule-based Score</span>
+                  <strong>{mlResult.ruleRiskScore ?? 'N/A'}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Decision Source</span>
+                  <span className="source-badge">{mlResult.decisionSource || 'RULES'}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Model Version</span>
+                  <span className="source-badge">{mlResult.modelVersion || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Location Risk</span>
+                  <strong>{mlResult.locationRisk || 'N/A'}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Device Known</span>
+                  <strong>{mlResult.deviceKnown || 'N/A'}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Applicant IP</span>
+                  <strong>{mlResult.applicantIp || 'N/A'}</strong>
+                </div>
+                
+                <div className="shap-explanation">
+                  <h4>SHAP Insights (Risk Factors)</h4>
+                  <p className="text-muted">Factors influencing this decision:</p>
+                  <div className="factors-list">
+                    {mlResult.mlFraudProbability > 0.4 ? (
+                      <>
+                        <div className="factor-item danger">
+                          <span>Low Credit Score</span>
+                          <div className="bar-bg"><div className="bar-fill" style={{width: '85%'}}></div></div>
+                        </div>
+                        <div className="factor-item warning">
+                          <span>High Loan-to-Income Ratio</span>
+                          <div className="bar-bg"><div className="bar-fill" style={{width: '60%'}}></div></div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="factor-item success">
+                        <span>Strong Financial Profile</span>
+                        <div className="bar-bg"><div className="bar-fill" style={{width: '90%'}}></div></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="results-actions">
+              <button onClick={resetForm} className="btn-primary">New Application</button>
+              <Link to="/dashboard" className="btn-outline">Go to Dashboard</Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── USER VIEW: Simple, clean result ───
     return (
       <div className="loan-page">
         <div className="results-container glass-card">
-          <div className="results-header">
-            <h2>Analysis Complete</h2>
-            <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}` }}>
+          <div className="results-header" style={{ flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '64px' }}>{decisionIcon}</div>
+            <h2 style={{ fontSize: '28px' }}>
+              {mlResult.decision === "APPROVED" ? "Loan Approved!" : mlResult.decision === "REJECTED" ? "Application Declined" : "Under Review"}
+            </h2>
+            <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}`, fontSize: '18px', padding: '10px 24px' }}>
               {mlResult.decision}
             </div>
           </div>
           
-          <div className="results-grid">
-            <div className="result-card">
-              <h4>ML Fraud Probability</h4>
-              <div className="gauge-container">
-                <CircularProgressbar 
-                  value={mlResult.mlFraudProbability * 100 || 0} 
-                  text={mlPercent}
-                  styles={buildStyles({
-                    pathColor: mlResult.mlFraudProbability > 0.5 ? 'var(--danger)' : 'var(--success)',
-                    textColor: 'var(--text-primary)',
-                    trailColor: 'var(--border-glass)'
-                  })}
-                />
-              </div>
-              <p className="recommendation">ML Says: <strong style={{ color: mlResult.mlRecommendation === 'APPROVE' ? 'var(--success)' : 'var(--danger)' }}>{mlResult.mlRecommendation}</strong></p>
-            </div>
-            
-            <div className="result-details">
-              <h3>Decision Breakdown</h3>
+          <div style={{ textAlign: 'center', padding: '20px 40px', color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.7' }}>
+            <p>{decisionMessage}</p>
+          </div>
+
+          <div className="results-grid" style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <div className="result-details" style={{ width: '100%' }}>
+              <h3>Application Summary</h3>
               <div className="detail-row">
-                <span>Final Risk Score</span>
-                <strong>{mlResult.riskScore} / 100</strong>
+                <span>Applicant</span>
+                <strong>{mlResult.fullName}</strong>
               </div>
               <div className="detail-row">
-                <span>Rule-based Score</span>
-                <strong>{mlResult.ruleRiskScore ?? 'N/A'}</strong>
+                <span>Loan Amount</span>
+                <strong>₹{Number(mlResult.loanAmount).toLocaleString()}</strong>
               </div>
               <div className="detail-row">
-                <span>Decision Source</span>
-                <span className="source-badge">{mlResult.decisionSource || 'RULES'}</span>
+                <span>Purpose</span>
+                <strong>{mlResult.loanPurpose}</strong>
               </div>
-              
-              <div className="shap-explanation">
-                <h4>SHAP Insights (Risk Factors)</h4>
-                <p className="text-muted">High probability factors influencing this decision:</p>
-                <div className="factors-list">
-                  {mlResult.mlFraudProbability > 0.4 ? (
-                    <>
-                      <div className="factor-item danger">
-                        <span>Low Credit Score</span>
-                        <div className="bar-bg"><div className="bar-fill" style={{width: '85%'}}></div></div>
-                      </div>
-                      <div className="factor-item warning">
-                        <span>High Loan-to-Income Ratio</span>
-                        <div className="bar-bg"><div className="bar-fill" style={{width: '60%'}}></div></div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="factor-item success">
-                      <span>Strong Financial Profile</span>
-                      <div className="bar-bg"><div className="bar-fill" style={{width: '90%'}}></div></div>
-                    </div>
-                  )}
-                </div>
+              <div className="detail-row">
+                <span>Status</span>
+                <span className="source-badge" style={{ color: decisionColor }}>{mlResult.status?.replace(/_/g, ' ') || 'PENDING'}</span>
               </div>
             </div>
           </div>
           
+          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            Application ID: #{mlResult.id} • Processed on {new Date().toLocaleDateString()}
+          </div>
+          
           <div className="results-actions">
-            <button onClick={resetForm} className="btn-primary">New Application</button>
-            <Link to="/dashboard" className="btn-outline">Go to Dashboard</Link>
+            <button onClick={resetForm} className="btn-primary">Submit Another Application</button>
+            <Link to="/" className="btn-outline">Back to Home</Link>
           </div>
         </div>
       </div>
@@ -271,6 +350,14 @@ function LoanForm() {
                   <label htmlFor="nationalIdNumber">ID Number</label>
                   <input id="nationalIdNumber" name="nationalIdNumber" value={formData.nationalIdNumber} onChange={handleChange} placeholder="Document Number" />
                 </div>
+                <div className="input-group">
+                  <label htmlFor="city">City</label>
+                  <input id="city" name="city" value={formData.city} onChange={handleChange} placeholder="e.g. Mumbai" />
+                </div>
+                <div className="input-group">
+                  <label htmlFor="state">State / Province</label>
+                  <input id="state" name="state" value={formData.state} onChange={handleChange} placeholder="e.g. Maharashtra" />
+                </div>
               </div>
             </div>
           )}
@@ -324,20 +411,6 @@ function LoanForm() {
                     <option value="BUSINESS">Business</option>
                   </select>
                 </div>
-                <div className="input-group full-width demo-box">
-                  <label>Fraud Engine Demo Signals (Hidden from real users)</label>
-                  <div className="demo-inputs">
-                    <select name="deviceKnown" value={formData.deviceKnown} onChange={handleChange}>
-                      <option value="YES">Known Device (Safe)</option>
-                      <option value="NO">Unknown Device (Risk)</option>
-                    </select>
-                    <select name="locationRisk" value={formData.locationRisk} onChange={handleChange}>
-                      <option value="LOW">Low Location Risk</option>
-                      <option value="MEDIUM">Medium Location Risk</option>
-                      <option value="HIGH">High Location Risk</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -355,6 +428,7 @@ function LoanForm() {
                   <p><strong>Email:</strong> {formData.email}</p>
                   <p><strong>Age:</strong> {formData.age}</p>
                   <p><strong>ID:</strong> {formData.nationalIdType} - {formData.nationalIdNumber}</p>
+                  <p><strong>Location:</strong> {formData.city}, {formData.state}</p>
                 </div>
                 <div className="summary-section">
                   <div className="summary-header">

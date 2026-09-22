@@ -6,6 +6,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
+  const { isAdmin } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +30,17 @@ export default function Login() {
       const response = await api.post("/auth/login", { username, password });
       login(response.data.token);
       toast.success("Successfully logged in!");
-      navigate("/dashboard");
+      // Decode role from token to decide redirect
+      try {
+        const payload = JSON.parse(atob(response.data.token.split('.')[1]));
+        if (payload.role === 'ROLE_ADMIN') {
+          navigate("/dashboard");
+        } else {
+          navigate("/loan");
+        }
+      } catch {
+        navigate("/loan");
+      }
     } catch (err) {
       setError("Invalid Credentials. Please try again.");
       toast.error("Login failed.");
@@ -63,8 +74,8 @@ export default function Login() {
 
       <div className="right-panel">
         <div className="login-card">
-          <h1>🛡 Admin Login</h1>
-          <p>Access FraudShield AI Dashboard</p>
+          <h1>🛡 Sign In</h1>
+          <p>Access your FraudShield AI account</p>
 
           <form onSubmit={handleLogin}>
             <div className="input-group">

@@ -55,6 +55,10 @@ public class SecurityConfig {
                         // Allow loan submission
                         .requestMatchers(HttpMethod.POST, "/loan")
                         .permitAll()
+
+                        // Restrict dashboard to ADMIN
+                        .requestMatchers(HttpMethod.GET, "/loan").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/loan/ai-review/**").hasRole("ADMIN")
                         
                         // Allow Swagger UI
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
@@ -127,7 +131,16 @@ public class SecurityConfig {
                         .roles("ADMIN")
                         .build();
 
-        return new InMemoryUserDetailsManager(admin);
+        UserDetails user =
+                User.builder()
+                        .username("user")
+                        .password(
+                                encoder.encode("user123")
+                        )
+                        .roles("USER")
+                        .build();
+
+        return new InMemoryUserDetailsManager(admin, user);
     }
 
     @Bean
