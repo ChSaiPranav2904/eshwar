@@ -7,12 +7,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -44,19 +40,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                         .permitAll()
 
-                        // Allow login without JWT
-                        .requestMatchers("/auth/**")
+                        // Allow login/register without JWT
+                        .requestMatchers("/auth/**", "/api/auth/**")
                         .permitAll()
 
                         // Allow health check
                         .requestMatchers("/actuator/health")
                         .permitAll()
 
-                        // Allow loan submission
-                        .requestMatchers(HttpMethod.POST, "/loan")
-                        .permitAll()
-
-                        // Restrict dashboard to ADMIN
+                        // Admin APIs are protected in the backend.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/loan").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/loan/ai-review/**").hasRole("ADMIN")
                         
@@ -116,31 +109,6 @@ public class SecurityConfig {
         );
 
         return source;
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService(
-            PasswordEncoder encoder
-    ) {
-        UserDetails admin =
-                User.builder()
-                        .username("admin")
-                        .password(
-                                encoder.encode("admin123")
-                        )
-                        .roles("ADMIN")
-                        .build();
-
-        UserDetails user =
-                User.builder()
-                        .username("user")
-                        .password(
-                                encoder.encode("user123")
-                        )
-                        .roles("USER")
-                        .build();
-
-        return new InMemoryUserDetailsManager(admin, user);
     }
 
     @Bean

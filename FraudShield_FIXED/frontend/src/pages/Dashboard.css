@@ -148,6 +148,8 @@
 .badge-approved { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .badge-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 .badge-manual_review { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.badge-low_risk { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.badge-high_risk { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
 .btn-review {
   background: rgba(59, 130, 246, 0.2);

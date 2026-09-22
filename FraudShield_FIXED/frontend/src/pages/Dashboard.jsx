@@ -13,20 +13,17 @@ function Dashboard() {
   const [applications, setApplications] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [showModal, setShowModal] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [aiReview, setAiReview] = useState("");
   const { logout } = useAuth();
 
   const loadApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get("/loan");
+      const response = await api.get("/api/admin/applications");
       setApplications(response.data);
     } catch (err) {
       console.error(err);
@@ -38,54 +35,21 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadApplications();
   }, [loadApplications]);
 
-  // Focus trap and escape key for modal
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape" && showModal) {
-        setShowModal(false);
-      }
-    };
-    if (showModal) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    } else {
-      document.body.style.overflow = "auto";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "auto";
-    };
-  }, [showModal]);
-
-  const getAIReview = async (id) => {
-    try {
-      setShowModal(true);
-      setLoadingAI(true);
-      const response = await api.get(`/loan/ai-review/${id}`);
-      setAiReview(response.data);
-    } catch (error) {
-      console.error(error);
-      setAiReview("Failed to load AI review.");
-      toast.error("Failed to load AI review.");
-    } finally {
-      setLoadingAI(false);
-    }
-  };
-
-  const approvedCount = applications.filter(app => app.decision === "APPROVED").length;
-  const rejectedCount = applications.filter(app => app.decision === "REJECTED").length;
   const reviewCount = applications.filter(app => app.decision === "MANUAL_REVIEW").length;
+  const lowRiskCount = applications.filter(app => app.decision === "LOW_RISK").length;
+  const highRiskCount = applications.filter(app => app.decision === "HIGH_RISK").length;
   const avgRisk = applications.length > 0
     ? (applications.reduce((sum, app) => sum + (app.riskScore || 0), 0) / applications.length).toFixed(1)
     : 0;
 
   const chartData = [
-    { name: "Approved", value: approvedCount },
-    { name: "Rejected", value: rejectedCount },
-    { name: "Review", value: reviewCount },
+    { name: "Low Risk", value: lowRiskCount },
+    { name: "Manual Review", value: reviewCount },
+    { name: "High Risk", value: highRiskCount },
   ];
 
   const riskDistribution = [
@@ -99,7 +63,9 @@ function Dashboard() {
     const matchesSearch = app.fullName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === "all" ? true
       : filterType === "approved" ? app.decision === "APPROVED"
-      : filterType === "rejected" ? app.decision === "REJECTED"
+      : filterType === "low" ? app.decision === "LOW_RISK"
+      : filterType === "high" ? app.decision === "HIGH_RISK"
+      : filterType === "pending" ? app.status === "UNDER_REVIEW"
       : app.decision === "MANUAL_REVIEW";
     return matchesSearch && matchesFilter;
   });
@@ -111,6 +77,7 @@ function Dashboard() {
         <div className="nav-actions">
           <Link to="/" className="nav-link">Home</Link>
           <Link to="/loan" className="nav-link">Apply Loan</Link>
+          <Link to="/my-applications" className="nav-link">My Applications</Link>
           <button onClick={logout} className="btn-danger">Logout</button>
         </div>
       </nav>
@@ -139,9 +106,9 @@ function Dashboard() {
         <>
           <div className="stats-container">
             <Card title="📄 Applications" value={applications.length} />
-            <Card title="✅ Approved" value={approvedCount} />
-            <Card title="❌ Rejected" value={rejectedCount} />
+            <Card title="Low Risk" value={lowRiskCount} />
             <Card title="⚠ Manual Review" value={reviewCount} />
+            <Card title="High Risk" value={highRiskCount} />
             <Card title="📊 Avg Risk" value={avgRisk} />
           </div>
 
@@ -188,9 +155,10 @@ function Dashboard() {
               className="filter-select"
             >
               <option value="all">All Applications</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
+              <option value="low">Low Risk</option>
               <option value="review">Manual Review</option>
+              <option value="high">High Risk</option>
+              <option value="pending">Pending</option>
             </select>
             <button onClick={loadApplications} className="btn-primary">Refresh</button>
           </div>
@@ -211,8 +179,9 @@ function Dashboard() {
                     <th>Final Risk</th>
                     <th>Source</th>
                     <th>Decision</th>
+                    <th>Identity</th>
                     <th>Status</th>
-                    <th>AI Review</th>
+                    <th>View</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,15 +202,14 @@ function Dashboard() {
                       <td className="font-bold">{app.riskScore}</td>
                       <td className="text-xs">{app.decisionSource || "RULES"}</td>
                       <td>
-                        <span className={`badge badge-${app.decision.toLowerCase()}`}>
+                        <span className={`badge badge-${app.decision?.toLowerCase()}`}>
                           {app.decision}
                         </span>
                       </td>
+                      <td>{app.identityVerified ? "Verified" : "Pending"}</td>
                       <td>{app.status}</td>
                       <td>
-                        <button onClick={() => getAIReview(app.id)} className="btn-review">
-                          🤖 Review
-                        </button>
+                        <Link to={`/dashboard/${app.id}`} className="btn-review">View</Link>
                       </td>
                     </tr>
                   ))}
@@ -256,37 +224,6 @@ function Dashboard() {
         </>
       )}
 
-      {showModal && (
-        <div 
-          className="modal-overlay" 
-          onClick={() => setShowModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>🤖 AI Loan Risk Analysis</h2>
-              <button className="btn-close" onClick={() => setShowModal(false)} aria-label="Close modal">×</button>
-            </div>
-            
-            {loadingAI ? (
-              <div className="modal-loading">
-                <div className="spinner"></div>
-                <h3>AI is analyzing this loan...</h3>
-                <p>Evaluating risk profile, fraud indicators and approval recommendation.</p>
-              </div>
-            ) : (
-              <div className="modal-body">
-                {aiReview}
-              </div>
-            )}
-            
-            <div className="modal-footer">
-              <button onClick={() => setShowModal(false)} className="btn-danger">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

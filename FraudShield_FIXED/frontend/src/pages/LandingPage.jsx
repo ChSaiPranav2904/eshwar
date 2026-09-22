@@ -16,13 +16,15 @@ function LandingPage() {
           {isAuthenticated ? (
             <>
               {isAdmin && <Link to="/dashboard" className="nav-link">Dashboard</Link>}
+              <Link to="/verify" className="nav-link">Identity</Link>
+              <Link to="/my-applications" className="nav-link">My Applications</Link>
               <Link to="/loan" className="nav-link">Apply for Loan</Link>
               <button onClick={logout} className="btn-secondary">Logout</button>
             </>
           ) : (
             <>
               <Link to="/login" className="nav-link">Login</Link>
-              <Link to="/loan" className="btn-primary">Apply Now</Link>
+              <Link to="/login" className="btn-primary">Apply Now</Link>
             </>
           )}
         </div>
@@ -39,7 +41,7 @@ function LandingPage() {
             Detect Fraud • Analyze Risk • Approve Loans
           </p>
           <div className="hero-actions animate-fade-in-up delay-2">
-            <Link to="/loan" className="btn-primary btn-large">Apply For Loan</Link>
+            <Link to={isAuthenticated ? "/verify" : "/login"} className="btn-primary btn-large">Apply For Loan</Link>
             {isAuthenticated && isAdmin ? (
               <Link to="/dashboard" className="btn-outline btn-large">Open Dashboard</Link>
             ) : (
@@ -74,7 +76,7 @@ function LandingPage() {
         <div className="feature-card glass-card">
           <div className="feature-icon">🤖</div>
           <h3>AI Investigation</h3>
-          <p>Generate SHAP-powered explanations for suspicious transactions and credit decisions.</p>
+          <p>Show model explanations when available and clearly mark unavailable explanations for analysts.</p>
         </div>
         <div className="feature-card glass-card">
           <div className="feature-icon">⚡</div>

@@ -11,6 +11,14 @@ public class LoanApplication {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private AppUser user;
+
+    @Column(name = "user_id", insertable = false, updatable = false)
+    private Long userId;
+
     @NotBlank(message = "Full Name is required")
 private String fullName;
 
@@ -58,6 +66,9 @@ private String employmentType;
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private String applicantIp;
 
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String deviceRisk;
+
     @NotBlank(message = "Loan Purpose is required")
     private String loanPurpose;
 
@@ -68,6 +79,19 @@ private String employmentType;
     private String nationalIdNumber;
 
     private String idDocumentName;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private Boolean identityVerified;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private Boolean mobileVerified;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String aadhaarLast4;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private String maskedAadhaar;
+
     private Double riskScore;
 
     // Keep the legacy rule score separately so the dashboard can show that ML is actually used.
@@ -76,6 +100,14 @@ private String employmentType;
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     @Column(columnDefinition = "TEXT")
     private String mlAssessment;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    @Column(columnDefinition = "TEXT")
+    private String mlFeatureVector;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    @Column(columnDefinition = "TEXT")
+    private String modelExplanation;
 
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private String mlRequestId;
@@ -96,6 +128,12 @@ private String employmentType;
 
     private String status;
 
+    private String actualOutcome = "UNKNOWN";
+
+    private String reviewedBy;
+
+    private java.time.LocalDateTime reviewedAt;
+
     @org.hibernate.annotations.CreationTimestamp
     @Column(updatable = false)
     private java.time.LocalDateTime createdAt;
@@ -108,6 +146,18 @@ private String employmentType;
 
     public Long getId() {
         return id;
+    }
+
+    public AppUser getUser() {
+        return user;
+    }
+
+    public void setUser(AppUser user) {
+        this.user = user;
+    }
+
+    public Long getUserId() {
+        return userId;
     }
 
     public String getFullName() {
@@ -230,6 +280,14 @@ private String employmentType;
         this.applicantIp = applicantIp;
     }
 
+    public String getDeviceRisk() {
+        return deviceRisk;
+    }
+
+    public void setDeviceRisk(String deviceRisk) {
+        this.deviceRisk = deviceRisk;
+    }
+
     public String getLoanPurpose() {
         return loanPurpose;
     }
@@ -260,6 +318,18 @@ public String getIdDocumentName() {
 public void setIdDocumentName(String idDocumentName) {
     this.idDocumentName = idDocumentName;
 }
+    public Boolean getIdentityVerified() { return identityVerified; }
+    public void setIdentityVerified(Boolean identityVerified) { this.identityVerified = identityVerified; }
+
+    public Boolean getMobileVerified() { return mobileVerified; }
+    public void setMobileVerified(Boolean mobileVerified) { this.mobileVerified = mobileVerified; }
+
+    public String getAadhaarLast4() { return aadhaarLast4; }
+    public void setAadhaarLast4(String aadhaarLast4) { this.aadhaarLast4 = aadhaarLast4; }
+
+    public String getMaskedAadhaar() { return maskedAadhaar; }
+    public void setMaskedAadhaar(String maskedAadhaar) { this.maskedAadhaar = maskedAadhaar; }
+
     public Double getRiskScore() {
         return riskScore;
     }
@@ -273,6 +343,12 @@ public void setIdDocumentName(String idDocumentName) {
 
     public String getMlAssessment() { return mlAssessment; }
     public void setMlAssessment(String mlAssessment) { this.mlAssessment = mlAssessment; }
+
+    public String getMlFeatureVector() { return mlFeatureVector; }
+    public void setMlFeatureVector(String mlFeatureVector) { this.mlFeatureVector = mlFeatureVector; }
+
+    public String getModelExplanation() { return modelExplanation; }
+    public void setModelExplanation(String modelExplanation) { this.modelExplanation = modelExplanation; }
 
     public String getMlRequestId() { return mlRequestId; }
     public void setMlRequestId(String mlRequestId) { this.mlRequestId = mlRequestId; }
@@ -304,4 +380,17 @@ public void setIdDocumentName(String idDocumentName) {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    public String getActualOutcome() { return actualOutcome; }
+    public void setActualOutcome(String actualOutcome) { this.actualOutcome = actualOutcome; }
+
+    public String getReviewedBy() { return reviewedBy; }
+    public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }
+
+    public java.time.LocalDateTime getReviewedAt() { return reviewedAt; }
+    public void setReviewedAt(java.time.LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; }
+
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
 }

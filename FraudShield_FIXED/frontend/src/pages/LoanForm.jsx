@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import toast from "react-hot-toast";
@@ -13,7 +13,25 @@ function LoanForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [mlResult, setMlResult] = useState(null);
-  const { isAdmin, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    api.get("/api/verification/status")
+      .then((response) => {
+        if (!response.data.identityVerified) {
+          toast.error("Complete identity verification before applying.");
+          navigate("/verify");
+        }
+      })
+      .catch(() => {
+        toast.error("Unable to confirm identity verification.");
+        navigate("/verify");
+      });
+  }, [isAuthenticated, navigate]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -45,7 +63,7 @@ function LoanForm() {
   const validateStep = (currentStep) => {
     switch(currentStep) {
       case 1:
-        if (!formData.fullName || !formData.email || !formData.age || !formData.nationalIdType || !formData.nationalIdNumber || !formData.city || !formData.state) {
+        if (!formData.fullName || !formData.email || !formData.age || !formData.city || !formData.state) {
           toast.error("Please fill all personal info fields");
           return false;
         }
@@ -109,7 +127,7 @@ function LoanForm() {
         existingLoans: Number(formData.existingLoans)
       };
 
-      const response = await api.post("/loan", payload);
+      const response = await api.post("/api/loans", payload);
       setMlResult(response.data);
       setShowResults(true);
       toast.success("Application submitted successfully!");
@@ -120,150 +138,37 @@ function LoanForm() {
     }
   };
 
-  const resetForm = () => {
-    setShowResults(false);
-    setMlResult(null);
-    setStep(1);
-    setFormData({
-      fullName: "", email: "", age: "", nationalIdType: "", nationalIdNumber: "", nationality: "INDIAN",
-      annualIncome: "", loanAmount: "", creditScore: "", existingLoans: "",
-      employmentType: "", loanPurpose: "", city: "", state: ""
-    });
-  };
-
   const score = Number(formData.creditScore) || 0;
   const estimatedRisk = score >= 750 ? "LOW RISK" : score >= 650 ? "MEDIUM RISK" : "HIGH RISK";
   const riskColor = estimatedRisk === "LOW RISK" ? "var(--success)" : estimatedRisk === "MEDIUM RISK" ? "var(--warning)" : "var(--danger)";
   
   if (showResults && mlResult) {
-    const decisionColor = mlResult.decision === "APPROVED" ? "var(--success)" : mlResult.decision === "REJECTED" ? "var(--danger)" : "var(--warning)";
-    const decisionIcon = mlResult.decision === "APPROVED" ? "✅" : mlResult.decision === "REJECTED" ? "❌" : "⏳";
-    const decisionMessage = mlResult.decision === "APPROVED" 
-      ? "Your loan application has been approved! You will receive further details via email shortly."
-      : mlResult.decision === "REJECTED"
-      ? "Unfortunately, your application could not be approved at this time. You may reapply after addressing the risk factors."
-      : "Your application requires additional review by our team. We will contact you within 2-3 business days.";
-
-    // ─── ADMIN VIEW: Full ML Breakdown ───
-    if (isAdmin) {
-      const mlPercent = mlResult.mlFraudProbability == null ? "N/A" : `${(mlResult.mlFraudProbability * 100).toFixed(1)}%`;
-      return (
-        <div className="loan-page">
-          <div className="results-container glass-card">
-            <div className="results-header">
-              <h2>🔬 Admin Analysis View</h2>
-              <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}` }}>
-                {mlResult.decision}
-              </div>
-            </div>
-            
-            <div className="results-grid">
-              <div className="result-card">
-                <h4>ML Fraud Probability</h4>
-                <div className="gauge-container">
-                  <CircularProgressbar 
-                    value={mlResult.mlFraudProbability * 100 || 0} 
-                    text={mlPercent}
-                    styles={buildStyles({
-                      pathColor: mlResult.mlFraudProbability > 0.5 ? 'var(--danger)' : 'var(--success)',
-                      textColor: 'var(--text-primary)',
-                      trailColor: 'var(--border-glass)'
-                    })}
-                  />
-                </div>
-                <p className="recommendation">ML Says: <strong style={{ color: mlResult.mlRecommendation === 'NO_FRAUD_ALERT' ? 'var(--success)' : 'var(--danger)' }}>{mlResult.mlRecommendation}</strong></p>
-              </div>
-              
-              <div className="result-details">
-                <h3>Decision Breakdown</h3>
-                <div className="detail-row">
-                  <span>Final Risk Score</span>
-                  <strong>{mlResult.riskScore} / 100</strong>
-                </div>
-                <div className="detail-row">
-                  <span>Rule-based Score</span>
-                  <strong>{mlResult.ruleRiskScore ?? 'N/A'}</strong>
-                </div>
-                <div className="detail-row">
-                  <span>Decision Source</span>
-                  <span className="source-badge">{mlResult.decisionSource || 'RULES'}</span>
-                </div>
-                <div className="detail-row">
-                  <span>Model Version</span>
-                  <span className="source-badge">{mlResult.modelVersion || 'N/A'}</span>
-                </div>
-                <div className="detail-row">
-                  <span>Location Risk</span>
-                  <strong>{mlResult.locationRisk || 'N/A'}</strong>
-                </div>
-                <div className="detail-row">
-                  <span>Device Known</span>
-                  <strong>{mlResult.deviceKnown || 'N/A'}</strong>
-                </div>
-                <div className="detail-row">
-                  <span>Applicant IP</span>
-                  <strong>{mlResult.applicantIp || 'N/A'}</strong>
-                </div>
-                
-                <div className="shap-explanation">
-                  <h4>SHAP Insights (Risk Factors)</h4>
-                  <p className="text-muted">Factors influencing this decision:</p>
-                  <div className="factors-list">
-                    {mlResult.mlFraudProbability > 0.4 ? (
-                      <>
-                        <div className="factor-item danger">
-                          <span>Low Credit Score</span>
-                          <div className="bar-bg"><div className="bar-fill" style={{width: '85%'}}></div></div>
-                        </div>
-                        <div className="factor-item warning">
-                          <span>High Loan-to-Income Ratio</span>
-                          <div className="bar-bg"><div className="bar-fill" style={{width: '60%'}}></div></div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="factor-item success">
-                        <span>Strong Financial Profile</span>
-                        <div className="bar-bg"><div className="bar-fill" style={{width: '90%'}}></div></div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="results-actions">
-              <button onClick={resetForm} className="btn-primary">New Application</button>
-              <Link to="/dashboard" className="btn-outline">Go to Dashboard</Link>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const decisionColor = "var(--warning)";
 
     // ─── USER VIEW: Simple, clean result ───
     return (
       <div className="loan-page">
         <div className="results-container glass-card">
           <div className="results-header" style={{ flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '64px' }}>{decisionIcon}</div>
+            <div style={{ fontSize: '64px' }}>✓</div>
             <h2 style={{ fontSize: '28px' }}>
-              {mlResult.decision === "APPROVED" ? "Loan Approved!" : mlResult.decision === "REJECTED" ? "Application Declined" : "Under Review"}
+              Application Submitted Successfully
             </h2>
             <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}`, fontSize: '18px', padding: '10px 24px' }}>
-              {mlResult.decision}
+              {mlResult.status?.replace(/_/g, ' ') || "UNDER REVIEW"}
             </div>
           </div>
           
           <div style={{ textAlign: 'center', padding: '20px 40px', color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.7' }}>
-            <p>{decisionMessage}</p>
+            <p>Your application has been successfully submitted. Our verification system is reviewing the information provided. You can track the status from My Applications.</p>
           </div>
 
           <div className="results-grid" style={{ maxWidth: '500px', margin: '0 auto' }}>
             <div className="result-details" style={{ width: '100%' }}>
               <h3>Application Summary</h3>
               <div className="detail-row">
-                <span>Applicant</span>
-                <strong>{mlResult.fullName}</strong>
+                <span>Application ID</span>
+                <strong>{mlResult.applicationId}</strong>
               </div>
               <div className="detail-row">
                 <span>Loan Amount</span>
@@ -274,18 +179,22 @@ function LoanForm() {
                 <strong>{mlResult.loanPurpose}</strong>
               </div>
               <div className="detail-row">
-                <span>Status</span>
+                <span>Identity</span>
+                <span className="source-badge" style={{ color: "var(--success)" }}>{mlResult.identityVerified ? "Verified" : "Pending"}</span>
+              </div>
+              <div className="detail-row">
+                <span>Application Status</span>
                 <span className="source-badge" style={{ color: decisionColor }}>{mlResult.status?.replace(/_/g, ' ') || 'PENDING'}</span>
               </div>
             </div>
           </div>
           
           <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            Application ID: #{mlResult.id} • Processed on {new Date().toLocaleDateString()}
+            Application ID: {mlResult.applicationId} • Processed on {new Date().toLocaleDateString()}
           </div>
           
           <div className="results-actions">
-            <button onClick={resetForm} className="btn-primary">Submit Another Application</button>
+            <Link to="/my-applications" className="btn-primary">My Applications</Link>
             <Link to="/" className="btn-outline">Back to Home</Link>
           </div>
         </div>
@@ -335,20 +244,6 @@ function LoanForm() {
                     <option value="INDIAN">Indian</option>
                     <option value="FOREIGN">Foreign National</option>
                   </select>
-                </div>
-                <div className="input-group">
-                  <label htmlFor="nationalIdType">ID Type</label>
-                  <select id="nationalIdType" name="nationalIdType" value={formData.nationalIdType} onChange={handleChange}>
-                    <option value="">Select ID Type</option>
-                    <option value="AADHAAR">Aadhaar</option>
-                    <option value="PAN">PAN</option>
-                    <option value="PASSPORT">Passport</option>
-                    <option value="DRIVING_LICENSE">Driving License</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label htmlFor="nationalIdNumber">ID Number</label>
-                  <input id="nationalIdNumber" name="nationalIdNumber" value={formData.nationalIdNumber} onChange={handleChange} placeholder="Document Number" />
                 </div>
                 <div className="input-group">
                   <label htmlFor="city">City</label>
@@ -427,7 +322,7 @@ function LoanForm() {
                   <p><strong>Name:</strong> {formData.fullName}</p>
                   <p><strong>Email:</strong> {formData.email}</p>
                   <p><strong>Age:</strong> {formData.age}</p>
-                  <p><strong>ID:</strong> {formData.nationalIdType} - {formData.nationalIdNumber}</p>
+                  <p><strong>Identity:</strong> Verified before submission</p>
                   <p><strong>Location:</strong> {formData.city}, {formData.state}</p>
                 </div>
                 <div className="summary-section">

@@ -13,15 +13,28 @@ public class JwtService {
     private String secret;
 
     public String generateToken(String username, String role) {
+        return generateToken(username, role, null, null);
+    }
 
-        return Jwts.builder()
+    public String generateToken(String username, String role, Long userId, String name) {
+
+        var builder = Jwts.builder()
                 .claim("role", role)
+                .claim("roles", role)
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + 86400000)
-                )
-                .signWith(
+                );
+
+        if (userId != null) {
+            builder.claim("userId", userId);
+        }
+        if (name != null) {
+            builder.claim("name", name);
+        }
+
+        return builder.signWith(
                         Keys.hmacShaKeyFor(secret.getBytes()),
                         SignatureAlgorithm.HS256
                 )

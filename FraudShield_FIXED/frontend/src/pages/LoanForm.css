@@ -392,6 +392,11 @@
   margin-top: 40px;
 }
 
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
 @media (max-width: 900px) {
   .loan-container {
     flex-direction: column;

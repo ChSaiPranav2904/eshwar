@@ -3,6 +3,7 @@ package com.fraud.backend.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraud.backend.entity.LoanApplication;
+import com.fraud.backend.exception.ModelUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,19 +31,31 @@ public class FraudModelClient {
     private final String token;
     private final String identitySecret;
     private final String mode;
+    private final double mlWeight;
+    private final double ruleWeight;
+    private final double lowMax;
+    private final double reviewMax;
 
     public FraudModelClient(
             ObjectMapper mapper,
             @Value("${fraud.ml.url:http://127.0.0.1:8001}") String baseUrl,
             @Value("${fraud.ml.token:fraudshield-demo-score-token-2026-local}") String token,
             @Value("${fraud.ml.identity-secret:fraudshield-demo-identity-secret-2026-local}") String identitySecret,
-            @Value("${fraud.ml.mode:hybrid}") String mode
+            @Value("${fraud.ml.mode:hybrid}") String mode,
+            @Value("${fraud.hybrid.ml-weight:0.45}") double mlWeight,
+            @Value("${fraud.hybrid.rule-weight:0.55}") double ruleWeight,
+            @Value("${fraud.decision.low-max:30}") double lowMax,
+            @Value("${fraud.decision.review-max:60}") double reviewMax
     ) {
         this.mapper = mapper;
         this.baseUrl = baseUrl.replaceAll("/+$", "");
         this.token = token;
         this.identitySecret = identitySecret;
         this.mode = mode.toLowerCase(Locale.ROOT);
+        this.mlWeight = mlWeight;
+        this.ruleWeight = ruleWeight;
+        this.lowMax = lowMax;
+        this.reviewMax = reviewMax;
         this.http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
                 .build();
@@ -73,9 +86,7 @@ public class FraudModelClient {
             }
 
             String nationalIdType = safe(application.getNationalIdType()).toUpperCase(Locale.ROOT);
-            String nationalIdNumber = safe(application.getNationalIdNumber())
-                    .replaceAll("\\s+", "")
-                    .toUpperCase(Locale.ROOT);
+            String nationalIdNumber = safe(application.getUserId()) + ":" + safe(application.getAadhaarLast4());
 
             String identityKey = hmac(nationalIdType + ":" + nationalIdNumber);
 
@@ -88,6 +99,23 @@ public class FraudModelClient {
             Map<String, Object> telemetry = new LinkedHashMap<>();
             telemetry.put("deviceUnknown", "NO".equalsIgnoreCase(application.getDeviceKnown()) ? 1 : 0);
             telemetry.put("locationRisk", locationRisk(application.getLocationRisk()));
+            telemetry.put("sessionSeconds", 180);
+            telemetry.put("failedLogins24h", 0);
+            telemetry.put("ipChanged", 0);
+
+            Map<String, Object> featureVector = new LinkedHashMap<>();
+            featureVector.put("identityVerified", Boolean.TRUE.equals(application.getIdentityVerified()) ? 1 : 0);
+            featureVector.put("mobileVerified", Boolean.TRUE.equals(application.getMobileVerified()) ? 1 : 0);
+            featureVector.put("deviceRisk", safe(application.getDeviceRisk()));
+            featureVector.put("locationRisk", safe(application.getLocationRisk()));
+            featureVector.put("income", application.getAnnualIncome());
+            featureVector.put("loanAmount", application.getLoanAmount());
+            featureVector.put("creditScore", application.getCreditScore());
+            featureVector.put("existingLoans", application.getExistingLoans());
+            featureVector.put("loanToIncomeRatio", loanToIncome(application));
+            featureVector.put("employmentType", safe(application.getEmploymentType()));
+            featureVector.put("modelTelemetry", telemetry);
+            application.setMlFeatureVector(mapper.writeValueAsString(featureVector));
 
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("requestId", requestId);
@@ -124,9 +152,23 @@ public class FraudModelClient {
             application.setMlFraudProbability(probability);
             application.setMlRecommendation(recommendation);
             application.setModelVersion(modelVersion);
+            application.setModelExplanation("Model explanation unavailable");
 
-            System.out.printf("[FraudShield ML] request=%s probability=%.4f recommendation=%s model=%s%n",
-                    requestId, probability, recommendation, modelVersion);
+            System.out.printf("""
+================ FRAUD MODEL =================
+Application ID: %s
+Model Version: %s
+Features: %s
+ML Fraud Probability: %.1f%%
+Rule Score: %.2f
+Decision Source: HYBRID_RULES+ML
+==============================================
+""",
+                    application.getId() == null ? "PENDING" : application.getId(),
+                    modelVersion,
+                    application.getMlFeatureVector(),
+                    probability * 100.0,
+                    application.getRuleRiskScore() == null ? 0.0 : application.getRuleRiskScore());
 
             if ("shadow".equals(mode)) {
                 application.setDecisionSource("RULES+ML_SHADOW");
@@ -144,9 +186,10 @@ public class FraudModelClient {
                     escapeJson(ex.getClass().getSimpleName() + ": " + safe(ex.getMessage())) +
                     "\"],\"modelVersion\":null}");
             application.setMlRecommendation("ML_UNAVAILABLE");
-            application.setDecisionSource("RULE_FALLBACK_ML_UNAVAILABLE");
+            application.setDecisionSource("MODEL_UNAVAILABLE");
 
             System.err.println("[FraudShield ML] unavailable: " + ex.getMessage());
+            throw new ModelUnavailableException(ex.getClass().getSimpleName() + ": " + safe(ex.getMessage()));
         }
     }
 
@@ -158,21 +201,31 @@ public class FraudModelClient {
 
         // Hybrid score: preserve the existing credit/rule signal while allowing the trained
         // fraud model to materially affect the final risk shown by the application.
-        double finalRisk = Math.round((0.55 * ruleRisk + 0.45 * mlRisk) * 100.0) / 100.0;
+        double totalWeight = mlWeight + ruleWeight;
+        double normalizedMlWeight = totalWeight <= 0 ? 0.45 : mlWeight / totalWeight;
+        double normalizedRuleWeight = totalWeight <= 0 ? 0.55 : ruleWeight / totalWeight;
+        double finalRisk = Math.round((normalizedRuleWeight * ruleRisk + normalizedMlWeight * mlRisk) * 100.0) / 100.0;
         finalRisk = Math.max(0.0, Math.min(100.0, finalRisk));
         application.setRiskScore(finalRisk);
 
-        if (finalRisk >= 70) {
-            application.setDecision("REJECTED");
-            application.setStatus("HIGH_RISK");
-        } else if (finalRisk >= 40 || "MANUAL_REVIEW".equals(recommendation)) {
+        if (finalRisk <= lowMax && !"MANUAL_REVIEW".equals(recommendation)) {
+            application.setDecision("LOW_RISK");
+            application.setStatus("UNDER_REVIEW");
+        } else if (finalRisk <= reviewMax || "MANUAL_REVIEW".equals(recommendation)) {
             application.setDecision("MANUAL_REVIEW");
-            application.setStatus("MEDIUM_RISK");
+            application.setStatus("UNDER_REVIEW");
         } else {
-            application.setDecision("APPROVED");
-            application.setStatus("LOW_RISK");
+            application.setDecision("HIGH_RISK");
+            application.setStatus("ADDITIONAL_VERIFICATION_REQUIRED");
         }
         application.setDecisionSource("HYBRID_RULES+ML");
+    }
+
+    private static double loanToIncome(LoanApplication application) {
+        if (application.getAnnualIncome() == null || application.getAnnualIncome() <= 0 || application.getLoanAmount() == null) {
+            return -1.0;
+        }
+        return Math.round((application.getLoanAmount() / application.getAnnualIncome()) * 10000.0) / 10000.0;
     }
 
     private String hmac(String value) throws Exception {
@@ -189,6 +242,10 @@ public class FraudModelClient {
 
     private static String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String safe(Long value) {
+        return value == null ? "" : value.toString();
     }
 
     private static String escapeJson(String value) {

@@ -31,6 +31,26 @@ cd backend\backend
 .\mvnw.cmd spring-boot:run
 ```
 
+If port `8087` is already in use:
+
+```powershell
+cd backend\backend
+$env:SERVER_PORT="8091"
+.\mvnw.cmd spring-boot:run
+```
+
+The default backend profile uses an embedded H2 demo database so local startup does not fail on a missing or mismatched PostgreSQL password.
+
+To run against PostgreSQL, create the database and pass your real local credentials:
+
+```powershell
+cd backend\backend
+$env:DB_URL="jdbc:postgresql://localhost:5432/fraudshields"
+$env:DB_USERNAME="postgres"
+$env:DB_PASSWORD="<your-postgres-password>"
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=postgres
+```
+
 Look for a line like this after submitting a loan:
 
 ```text

@@ -31,6 +31,12 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : "Resource not found"));
     }
 
+    @ExceptionHandler(ModelUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleModelUnavailable(ModelUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "MODEL_UNAVAILABLE", "detail", ex.getMessage()));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

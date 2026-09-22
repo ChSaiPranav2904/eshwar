@@ -2,8 +2,18 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8087',
 });
+
+function getDeviceId() {
+  const key = 'fraudshieldDeviceId';
+  let value = localStorage.getItem(key);
+  if (!value) {
+    value = `${navigator.userAgent.slice(0, 40)}-${crypto.randomUUID?.() || Date.now()}`;
+    localStorage.setItem(key, value);
+  }
+  return value;
+}
 
 api.interceptors.request.use(
   (config) => {
@@ -11,6 +21,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers['X-Device-Id'] = getDeviceId();
     return config;
   },
   (error) => Promise.reject(error)

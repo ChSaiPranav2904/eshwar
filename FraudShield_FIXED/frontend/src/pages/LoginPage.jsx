@@ -1,49 +1,58 @@
 import "../Login.css";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { isAdmin } = useAuth();
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const requestedPath = location.state?.from?.pathname;
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
+    if (mode === "register" && !name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
     if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password.");
+      setError("Please enter both email and password.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await api.post("/auth/login", { username, password });
+      const response = mode === "register"
+        ? await api.post("/api/auth/register", { name, email: username, password })
+        : await api.post("/api/auth/login", { username, password });
       login(response.data.token);
-      toast.success("Successfully logged in!");
+      toast.success(mode === "register" ? "Account created!" : "Successfully logged in!");
       // Decode role from token to decide redirect
       try {
         const payload = JSON.parse(atob(response.data.token.split('.')[1]));
         if (payload.role === 'ROLE_ADMIN') {
           navigate("/dashboard");
         } else {
-          navigate("/loan");
+          navigate(requestedPath || "/verify", { replace: true });
         }
       } catch {
-        navigate("/loan");
+        navigate(requestedPath || "/verify", { replace: true });
       }
     } catch (err) {
-      setError("Invalid Credentials. Please try again.");
-      toast.error("Login failed.");
+      setError(err.response?.data?.error || err.response?.data || "Unable to complete request.");
+      toast.error(mode === "register" ? "Sign up failed." : "Login failed.");
     } finally {
       setIsLoading(false);
     }
@@ -74,16 +83,35 @@ export default function Login() {
 
       <div className="right-panel">
         <div className="login-card">
-          <h1>🛡 Sign In</h1>
-          <p>Access your FraudShield AI account</p>
+          <h1>{mode === "register" ? "Create Account" : "Sign In"}</h1>
+          <p>
+            {mode === "register"
+              ? "Start identity verification and loan application"
+              : requestedPath === "/loan"
+                ? "Sign in to continue your loan application"
+                : "Access your FraudShield AI account"}
+          </p>
 
           <form onSubmit={handleLogin}>
+            {mode === "register" && (
+              <div className="input-group">
+                <label htmlFor="name">Full Name</label>
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
             <div className="input-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">Email</label>
               <input
                 id="username"
-                type="text"
-                placeholder="Enter your username"
+                type="email"
+                placeholder="Enter your email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
@@ -105,9 +133,21 @@ export default function Login() {
             {error && <div className="error-text">{error}</div>}
 
             <button type="submit" disabled={isLoading}>
-              {isLoading ? <div className="spinner" style={{ width: '24px', height: '24px', margin: '0' }}></div> : "Login"}
+              {isLoading ? <div className="spinner" style={{ width: '24px', height: '24px', margin: '0' }}></div> : mode === "register" ? "Sign Up" : "Login"}
             </button>
           </form>
+
+          <button
+            type="button"
+            className="btn-outline"
+            style={{ width: "100%", marginTop: "16px" }}
+            onClick={() => {
+              setError("");
+              setMode(mode === "register" ? "login" : "register");
+            }}
+          >
+            {mode === "register" ? "Already have an account? Login" : "New customer? Sign Up"}
+          </button>
 
           <div className="footer-text">PEOPLE | DATA | TRUST</div>
         </div>
