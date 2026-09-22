@@ -41,7 +41,8 @@ def synthetic(n=20000, seed=42, novel=False):
 
 def read_csv(path):
     """Require pre-event features, confirmed labels, disjoint identities, temporal order."""
-    rows = list(csv.DictReader(open(path, newline="")))
+    with open(path, newline="") as f:
+        rows = list(csv.DictReader(f))
     if len(rows) < 2000:
         raise ValueError("Provide >=2000 resolved examples; small/one-class splits will also fail")
     seen, x, y, times = set(), [], [], []

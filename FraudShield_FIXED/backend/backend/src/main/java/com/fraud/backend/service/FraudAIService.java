@@ -44,9 +44,13 @@ public class FraudAIService {
                         fraudScore
                 );
 
-        return chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
+        try {
+            return chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            return "AI service is currently unavailable. Please try again later. Error: " + e.getMessage();
+        }
     }
 }

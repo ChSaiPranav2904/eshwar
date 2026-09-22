@@ -50,12 +50,15 @@ private String employmentType;
     private String locationRisk;
 
     @NotBlank(message = "Loan Purpose is required")
-private String loanPurpose;
-private String nationalIdType;
+    private String loanPurpose;
 
-private String nationalIdNumber;
+    @NotBlank(message = "National ID Type is required")
+    private String nationalIdType;
 
-private String idDocumentName;
+    @NotBlank(message = "National ID Number is required")
+    private String nationalIdNumber;
+
+    private String idDocumentName;
     private Double riskScore;
 
     // Keep the legacy rule score separately so the dashboard can show that ML is actually used.
@@ -83,6 +86,13 @@ private String idDocumentName;
     private String decision;
 
     private String status;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    private java.time.LocalDateTime updatedAt;
 
     public LoanApplication() {
     }

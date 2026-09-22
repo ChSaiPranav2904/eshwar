@@ -6,7 +6,6 @@ import com.fraud.backend.service.FraudAIService;
 import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/ai")
-@CrossOrigin(origins = "http://localhost:5174")
 public class AIController {
 
     private final FraudAIService fraudAIService;

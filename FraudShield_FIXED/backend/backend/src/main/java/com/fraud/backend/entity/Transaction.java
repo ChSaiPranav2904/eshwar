@@ -12,6 +12,8 @@ public class Transaction {
 
     private String sender;
     private String receiver;
+
+    @jakarta.validation.constraints.NotNull(message = "Amount is required")
     private Double amount;
 
     private Boolean fraud;
@@ -22,6 +24,13 @@ public class Transaction {
 
     @Column(length = 500)
     private String reason;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    private java.time.LocalDateTime updatedAt;
 
     public Transaction() {}
 

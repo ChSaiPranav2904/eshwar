@@ -7,13 +7,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = {"http://localhost:5174","http://localhost:5173"})
 public class AuthController {
 private final JwtService jwtService;
+private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
     
 
-    public AuthController(JwtService jwtService) {
+    public AuthController(JwtService jwtService, 
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                          org.springframework.security.core.userdetails.UserDetailsService userDetailsService) {
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.userDetailsService = userDetailsService;
     }
 
     @GetMapping("/test")
@@ -25,17 +30,15 @@ private final JwtService jwtService;
     public ResponseEntity<?> login(
             @RequestBody LoginRequest request) {
 
-        if ("admin".equals(request.getUsername())
-                && "admin123".equals(request.getPassword())) {
-
-            String token =
-                    jwtService.generateToken(
-                            request.getUsername()
-                    );
-
-           return ResponseEntity.ok(
-        Map.of("token", token)
-);
+        try {
+            var userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+            if (passwordEncoder.matches(request.getPassword(), userDetails.getPassword())) {
+                String role = userDetails.getAuthorities().iterator().next().getAuthority();
+                String token = jwtService.generateToken(userDetails.getUsername(), role);
+                return ResponseEntity.ok(Map.of("token", token));
+            }
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            // fallthrough
         }
 
         return ResponseEntity.status(401)

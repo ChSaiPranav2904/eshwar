@@ -9,19 +9,20 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final String SECRET =
-            "mysecretkeymysecretkeymysecretkey123456";
+    @org.springframework.beans.factory.annotation.Value("${jwt.secret:default-dev-secret-key-change-in-production-32chars}")
+    private String secret;
 
-    public String generateToken(String username) {
+    public String generateToken(String username, String role) {
 
         return Jwts.builder()
+                .claim("role", role)
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + 86400000)
                 )
                 .signWith(
-                        Keys.hmacShaKeyFor(SECRET.getBytes()),
+                        Keys.hmacShaKeyFor(secret.getBytes()),
                         SignatureAlgorithm.HS256
                 )
                 .compact();
@@ -31,12 +32,23 @@ public class JwtService {
 
         return Jwts.parserBuilder()
                 .setSigningKey(
-                        Keys.hmacShaKeyFor(SECRET.getBytes())
+                        Keys.hmacShaKeyFor(secret.getBytes())
                 )
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public String extractRole(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(
+                        Keys.hmacShaKeyFor(secret.getBytes())
+                )
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role", String.class);
     }
 
     public boolean validateToken(String token) {
@@ -45,7 +57,7 @@ public class JwtService {
 
             Jwts.parserBuilder()
                     .setSigningKey(
-                            Keys.hmacShaKeyFor(SECRET.getBytes())
+                            Keys.hmacShaKeyFor(secret.getBytes())
                     )
                     .build()
                     .parseClaimsJws(token);

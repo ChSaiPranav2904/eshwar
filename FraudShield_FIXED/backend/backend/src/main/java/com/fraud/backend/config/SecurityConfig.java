@@ -55,6 +55,10 @@ public class SecurityConfig {
                         // Allow loan submission
                         .requestMatchers(HttpMethod.POST, "/loan")
                         .permitAll()
+                        
+                        // Allow Swagger UI
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
+                        .permitAll()
 
                         // Protect remaining endpoints
                         .anyRequest()
@@ -69,7 +73,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${FRONTEND_URL:http://localhost:5174}") String frontendUrl
+    ) {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
@@ -77,7 +83,8 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:5174",
                 "http://127.0.0.1:5173",
-                "http://127.0.0.1:5174"
+                "http://127.0.0.1:5174",
+                frontendUrl
         ));
 
         configuration.setAllowedMethods(List.of(
