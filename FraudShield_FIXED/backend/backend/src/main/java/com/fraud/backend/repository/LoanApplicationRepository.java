@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface LoanApplicationRepository
         extends JpaRepository<LoanApplication, Long> {
     List<LoanApplication> findByUserOrderByCreatedAtDesc(AppUser user);
+    int countByUserAndCreatedAtAfter(AppUser user, java.time.LocalDateTime timestamp);
 }

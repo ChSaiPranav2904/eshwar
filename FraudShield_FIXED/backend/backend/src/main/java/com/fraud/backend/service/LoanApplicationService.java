@@ -417,7 +417,7 @@ Do NOT suggest a loan approval or rejection.
      *   Credit score, annual income, loan amount, existing loans,
      *   employment type, loan-to-income ratio, age.
      */
-    private static void computeFraudSignalScores(LoanApplication application) {
+    private void computeFraudSignalScores(LoanApplication application) {
         // ── Identity Risk (0-100) ─────────────────────────────────────────────
         double identityRisk = 0.0;
         if (!Boolean.TRUE.equals(application.getIdentityVerified())) identityRisk += 60.0; // Aadhaar unverified
@@ -436,11 +436,21 @@ Do NOT suggest a loan approval or rejection.
         application.setDeviceRiskScore(deviceRisk);
 
         // ── Velocity Risk (0-100) ─────────────────────────────────────────────
-        // Primary velocity signals (identityApplications24h, deviceIdentities24h) are
-        // computed by the ML engine server-side from its prediction history and fed
-        // directly into the ML model's feature vector. They influence ML fraud probability.
-        // Rule-based velocity risk starts at 0 here — the ML model carries this signal.
-        application.setVelocityRiskScore(0.0);
+        // Compute rule-based velocity risk: How many applications from this user in the last 24h?
+        java.time.LocalDateTime yesterday = java.time.LocalDateTime.now().minusHours(24);
+        int appsIn24h = repository.countByUserAndCreatedAtAfter(application.getUser(), yesterday);
+        
+        double velocityRisk = 0.0;
+        if (appsIn24h >= 4) {
+            velocityRisk = 100.0;  // 5th+ application
+        } else if (appsIn24h == 3) {
+            velocityRisk = 80.0;   // 4th application
+        } else if (appsIn24h == 2) {
+            velocityRisk = 50.0;   // 3rd application
+        } else if (appsIn24h == 1) {
+            velocityRisk = 25.0;   // 2nd application
+        }
+        application.setVelocityRiskScore(velocityRisk);
 
         // ── Location Risk (0-100) ─────────────────────────────────────────────
         double locationRisk = 0.0;
