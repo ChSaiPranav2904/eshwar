@@ -4,6 +4,7 @@ import com.fraud.backend.dto.AadhaarConfirmRequest;
 import com.fraud.backend.dto.OtpRequest;
 import com.fraud.backend.service.AadhaarVerificationService;
 import com.fraud.backend.service.OtpService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -37,8 +38,8 @@ public class VerificationController {
     }
 
     @PostMapping("/mobile/verify-otp")
-    public Object verifyOtp(@RequestBody OtpRequest request) {
-        return otpService.verifyOtp(request.getOtp());
+    public Object verifyOtp(@RequestBody OtpRequest request, HttpServletRequest servletRequest) {
+        return otpService.verifyOtp(request.getOtp(), servletRequest.getHeader("X-Device-Id"));
     }
 
     @GetMapping("/status")

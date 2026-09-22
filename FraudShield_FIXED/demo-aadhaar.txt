@@ -1,0 +1,5 @@
+Name: Demo Borrower
+DOB: 1994-07-18
+Gender: MALE
+Address: 221 Fintech Street, Mumbai, Maharashtra
+Aadhaar: 1234 5678 4321

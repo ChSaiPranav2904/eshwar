@@ -72,10 +72,8 @@ private String employmentType;
     @NotBlank(message = "Loan Purpose is required")
     private String loanPurpose;
 
-    @NotBlank(message = "National ID Type is required")
     private String nationalIdType;
 
-    @NotBlank(message = "National ID Number is required")
     private String nationalIdNumber;
 
     private String idDocumentName;

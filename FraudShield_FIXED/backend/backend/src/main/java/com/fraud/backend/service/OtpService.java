@@ -20,6 +20,7 @@ public class OtpService {
     private final IdentityVerificationRepository identityRepository;
     private final CurrentUserService currentUserService;
     private final AadhaarVerificationService aadhaarVerificationService;
+    private final DeviceRiskService deviceRiskService;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom random = new SecureRandom();
 
@@ -28,12 +29,14 @@ public class OtpService {
             IdentityVerificationRepository identityRepository,
             CurrentUserService currentUserService,
             AadhaarVerificationService aadhaarVerificationService,
+            DeviceRiskService deviceRiskService,
             PasswordEncoder passwordEncoder
     ) {
         this.otpRepository = otpRepository;
         this.identityRepository = identityRepository;
         this.currentUserService = currentUserService;
         this.aadhaarVerificationService = aadhaarVerificationService;
+        this.deviceRiskService = deviceRiskService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -60,7 +63,7 @@ public class OtpService {
         );
     }
 
-    public IdentityVerification verifyOtp(String otp) {
+    public IdentityVerification verifyOtp(String otp, String deviceId) {
         AppUser user = currentUserService.requireUser();
         OtpVerification verification = otpRepository.findTopByUserAndVerifiedFalseOrderByCreatedAtDesc(user)
                 .orElseThrow(() -> new IllegalArgumentException("OTP_NOT_REQUESTED"));
@@ -86,6 +89,9 @@ public class OtpService {
         identity.setMobileNumberMasked(maskMobile(verification.getMobileNumber()));
         identity.setMobileVerified(true);
         aadhaarVerificationService.updateIdentityStatus(identity);
+        if (identity.isIdentityVerified()) {
+            deviceRiskService.trustDevice(user, deviceId);
+        }
         return identityRepository.save(identity);
     }
 

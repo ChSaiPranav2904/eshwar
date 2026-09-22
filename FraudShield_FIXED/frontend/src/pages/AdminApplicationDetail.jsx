@@ -28,6 +28,7 @@ function AdminApplicationDetail() {
 
   const app = analysis.application;
   const probability = Number(app.mlFraudProbability || 0) * 100;
+  const probabilityText = probability < 1 ? probability.toFixed(2) : probability.toFixed(1);
   const pipelineEntries = Object.entries(analysis.pipeline || {});
 
   return (
@@ -47,7 +48,7 @@ function AdminApplicationDetail() {
             <div className="gauge-container">
               <CircularProgressbar
                 value={probability}
-                text={`${probability.toFixed(1)}%`}
+                text={`${probabilityText}%`}
                 styles={buildStyles({
                   pathColor: probability >= 60 ? "var(--danger)" : probability >= 30 ? "var(--warning)" : "var(--success)",
                   textColor: "var(--text-primary)",
@@ -81,7 +82,9 @@ function AdminApplicationDetail() {
           {pipelineEntries.map(([label, value]) => (
             <div className="detail-row" key={label}>
               <span>{label}</span>
-              <strong>{typeof value === "number" ? `${(value * 100).toFixed(1)}%` : String(value || "UNKNOWN")}</strong>
+              <strong className="pipeline-value">
+                {typeof value === "number" ? `${(value * 100).toFixed(1)}%` : String(value || "UNKNOWN")}
+              </strong>
             </div>
           ))}
         </div>
@@ -94,7 +97,7 @@ function Detail({ label, value }) {
   return (
     <div className="detail-row">
       <span>{label}</span>
-      <strong>{value ?? "UNKNOWN"}</strong>
+      <strong className="detail-value">{value ?? "UNKNOWN"}</strong>
     </div>
   );
 }

@@ -7,6 +7,14 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./LoanForm.css";
 
+function getErrorMessage(error, fallback) {
+  const data = error.response?.data;
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  if (typeof data.error === "string") return data.error;
+  return Object.values(data).filter(Boolean).join(". ") || fallback;
+}
+
 function LoanForm() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
@@ -132,7 +140,7 @@ function LoanForm() {
       setShowResults(true);
       toast.success("Application submitted successfully!");
     } catch (error) {
-      toast.error(error.response?.data || "Server Error. Check backend logs.");
+      toast.error(getErrorMessage(error, "Server Error. Check backend logs."));
     } finally {
       setIsSubmitting(false);
     }

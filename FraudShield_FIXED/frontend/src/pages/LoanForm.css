@@ -316,6 +316,7 @@
   padding: 30px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
+  align-self: start;
 }
 
 .gauge-container {
@@ -336,11 +337,32 @@
 .detail-row {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
   padding: 15px;
   background: var(--bg-secondary);
   margin-bottom: 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-glass);
+}
+
+.detail-row > span {
+  flex: 0 0 34%;
+  min-width: 0;
+}
+
+.detail-row > strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pipeline-value {
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 .source-badge {
@@ -422,5 +444,11 @@
   }
   .btn-submit {
     width: 100%;
+  }
+  .detail-row {
+    gap: 12px;
+  }
+  .detail-row > span {
+    flex-basis: 38%;
   }
 }

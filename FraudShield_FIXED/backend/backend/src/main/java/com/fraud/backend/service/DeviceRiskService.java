@@ -31,4 +31,18 @@ public class DeviceRiskService {
         knownDeviceRepository.save(device);
         return Map.of("deviceKnown", "NO", "deviceRisk", "HIGH", "deviceKey", key);
     }
+
+    public void trustDevice(AppUser user, String deviceId) {
+        String key = deviceId == null || deviceId.isBlank() ? "MISSING_DEVICE_ID" : deviceId.trim();
+        var existing = knownDeviceRepository.findByUserAndDeviceKey(user, key);
+        if (existing.isPresent()) {
+            knownDeviceRepository.save(existing.get());
+            return;
+        }
+
+        KnownDevice device = new KnownDevice();
+        device.setUser(user);
+        device.setDeviceKey(key);
+        knownDeviceRepository.save(device);
+    }
 }

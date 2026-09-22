@@ -1,0 +1,13 @@
+{
+  "name": "astra-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["aurelion", "astra-strike"],
+  "scripts": {
+    "dev": "npm run dev --workspace=astra-strike",
+    "build": "npm run build --workspace=astra-strike",
+    "typecheck": "npm run typecheck --workspace=astra-strike",
+    "test": "npm run test --workspace=astra-strike",
+    "dev:aurelion": "npm run dev --workspace=aurelion"
+  }
+}

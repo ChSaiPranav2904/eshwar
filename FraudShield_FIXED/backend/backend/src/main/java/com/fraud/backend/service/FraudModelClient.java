@@ -86,22 +86,32 @@ public class FraudModelClient {
             }
 
             String nationalIdType = safe(application.getNationalIdType()).toUpperCase(Locale.ROOT);
-            String nationalIdNumber = safe(application.getUserId()) + ":" + safe(application.getAadhaarLast4());
+            String userStableId = application.getUser() == null
+                    ? safe(application.getUserId())
+                    : safe(application.getUser().getId());
+            String nationalIdNumber = userStableId + ":" + safe(application.getAadhaarLast4());
 
             String identityKey = hmac(nationalIdType + ":" + nationalIdNumber);
 
-            // Demo device fingerprint. It is generated on the backend so the ML service receives
-            // a stable pseudonymous key instead of raw IP/User-Agent values.
-            String deviceMaterial = safe(servletRequest.getRemoteAddr()) + "|" +
-                    safe(servletRequest.getHeader("User-Agent"));
+            // Use the same non-invasive browser device id that DeviceRiskService uses. Scope trusted
+            // demo devices to the user so repeated localhost test accounts do not poison good loans.
+            String browserDeviceId = safe(servletRequest.getHeader("X-Device-Id"));
+            if (browserDeviceId.isBlank()) {
+                browserDeviceId = safe(servletRequest.getRemoteAddr()) + "|" + safe(servletRequest.getHeader("User-Agent"));
+            }
+            String deviceMaterial = "YES".equalsIgnoreCase(application.getDeviceKnown())
+                    ? userStableId + ":" + browserDeviceId
+                    : browserDeviceId;
             String deviceKey = hmac("DEVICE:" + deviceMaterial);
 
             Map<String, Object> telemetry = new LinkedHashMap<>();
             telemetry.put("deviceUnknown", "NO".equalsIgnoreCase(application.getDeviceKnown()) ? 1 : 0);
             telemetry.put("locationRisk", locationRisk(application.getLocationRisk()));
-            telemetry.put("sessionSeconds", 180);
-            telemetry.put("failedLogins24h", 0);
-            telemetry.put("ipChanged", 0);
+            // These signals are not available during loan submission. Sending normal-looking
+            // values here makes every application appear identical to the trained model.
+            telemetry.put("sessionSeconds", -1);
+            telemetry.put("failedLogins24h", -1);
+            telemetry.put("ipChanged", -1);
 
             Map<String, Object> featureVector = new LinkedHashMap<>();
             featureVector.put("identityVerified", Boolean.TRUE.equals(application.getIdentityVerified()) ? 1 : 0);
