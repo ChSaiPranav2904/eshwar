@@ -1,0 +1,12 @@
+{
+  "requestId": "demo-application-001",
+  "identityKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "deviceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "telemetry": {
+    "deviceUnknown": 0,
+    "locationRisk": 0,
+    "sessionSeconds": 180,
+    "failedLogins24h": 0,
+    "ipChanged": 0
+  }
+}

@@ -1,0 +1,89 @@
+.loan-page{
+  min-height:100vh;
+  background:linear-gradient(
+    135deg,
+    #020617,
+    #0f172a,
+    #111827
+  );
+  padding:40px;
+  color:white;
+}
+
+.loan-header{
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.loan-title {
+  font-size: 56px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -1px;
+}
+
+.loan-subtitle{
+  color:#94a3b8;
+  margin-top:10px;
+  font-size:18px;
+}
+
+.loan-container{
+  width:100%;
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:30px;
+}
+
+.loan-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,.05);
+
+  border-radius: 28px;
+
+  padding: 35px;
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.35);
+
+  transition: .3s;
+}
+.preview-card {
+  background: rgba(15, 23, 42, 0.75);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,.05);
+
+  border-radius: 28px;
+
+  padding: 35px;
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.35);
+
+  transition: .3s;
+}.loan-card:hover,
+.preview-card:hover {
+  transform: translateY(-4px);
+
+  border-color: rgba(99,102,241,.25);
+
+  box-shadow:
+    0 30px 80px rgba(79,70,229,.15);
+}
+input,
+select {
+  font-family: "Manrope", sans-serif;
+}
+
+input:focus,
+select:focus {
+  border-color: #6366f1 !important;
+
+  box-shadow:
+    0 0 0 4px rgba(99,102,241,.15);
+}

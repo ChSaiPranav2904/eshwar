@@ -1,0 +1,57 @@
+{
+  "data": "SYNTHETIC DEMONSTRATION ONLY",
+  "source_sha256": "a930e8f0719f5e3aae3bad94392afec81f7c8b03dca1a44bae080f2e01ae97ef",
+  "features": [
+    "deviceUnknown",
+    "locationRisk",
+    "identityApplications24h",
+    "deviceIdentities24h",
+    "sessionSeconds",
+    "failedLogins24h",
+    "ipChanged"
+  ],
+  "rows": 20000,
+  "split": {
+    "train": 12000,
+    "calibration": 3000,
+    "threshold_tuning": 2000,
+    "test": 3000
+  },
+  "review_fpr_target_on_tuning": 0.03,
+  "review_threshold": 0.05228606982082417,
+  "anomaly_threshold": 0.6445637910965405,
+  "held_out_test": {
+    "rows": 3000,
+    "tn": 2696,
+    "fp": 73,
+    "fn": 15,
+    "tp": 216,
+    "false_positive_rate": 0.0263633080534489,
+    "fpr_upper_95": 0.033018869427720345,
+    "precision": 0.7474048442906575,
+    "recall": 0.935064935064935,
+    "average_precision": 0.9360051022806904,
+    "brier_score": 0.01034460358600748,
+    "review_rate": 0.09633333333333334
+  },
+  "classifier_at_default_0_5": {
+    "rows": 3000,
+    "tn": 2755,
+    "fp": 14,
+    "fn": 26,
+    "tp": 205,
+    "false_positive_rate": 0.005055976886962802,
+    "fpr_upper_95": 0.008469241394632222,
+    "precision": 0.9360730593607306,
+    "recall": 0.8874458874458875,
+    "average_precision": 0.9360051022806904,
+    "brier_score": 0.01034460358600748,
+    "review_rate": 0.073
+  },
+  "limitations": [
+    "Synthetic results do not establish real-world performance.",
+    "Anomalies are review signals, not confirmed fraud.",
+    "FPR target is selected on tuning data, not a guarantee on future traffic.",
+    "No automatic rejection or loan approval; fraud alert is separate from credit assessment."
+  ]
+}
