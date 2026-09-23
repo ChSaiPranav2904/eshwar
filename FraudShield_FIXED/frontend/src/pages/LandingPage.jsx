@@ -8,7 +8,7 @@ function LandingPage() {
   return (
     <div className="landing-page">
       {/* Navbar */}
-      <nav className="navbar glass-card">
+      <nav className="navbar">
         <div className="nav-logo">
           <h2>Fraud<span>Shield AI</span></h2>
         </div>
@@ -34,14 +34,16 @@ function LandingPage() {
       <div className="hero-section">
         <div className="hero-content">
           <h1 className="animate-fade-in-up">
-            Next-Generation <br/>
-            <span className="text-gradient">AI Fraud Detection</span>
+            Smarter Lending.<br/>
+            <span className="text-gradient">Fraud-Free.</span>
           </h1>
           <p className="hero-subtitle animate-fade-in-up delay-1">
-            Detect Fraud • Analyze Risk • Approve Loans
+            ML-powered fraud detection and identity verification for secure digital lending.
           </p>
           <div className="hero-actions animate-fade-in-up delay-2">
-            <Link to={isAuthenticated ? "/verify" : "/login"} className="btn-primary btn-large">Apply For Loan</Link>
+            <Link to={isAuthenticated ? "/verify" : "/login"} className="btn-primary btn-large">
+              Apply for a Loan
+            </Link>
             {isAuthenticated && isAdmin ? (
               <Link to="/dashboard" className="btn-outline btn-large">Open Dashboard</Link>
             ) : (
@@ -55,38 +57,22 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="stats-section scroll-animate">
-        <div className="stat-card glass-card">
-          <h2>10M+</h2>
-          <p>Transactions Processed</p>
-        </div>
-        <div className="stat-card glass-card">
-          <h2>99.9%</h2>
-          <p>Fraud Detection Accuracy</p>
-        </div>
-        <div className="stat-card glass-card">
-          <h2>&lt; 50ms</h2>
-          <p>Real-time AI Risk Analysis</p>
-        </div>
-      </div>
-
       {/* Features */}
-      <div className="features-section scroll-animate">
+      <div className="features-section">
         <div className="feature-card glass-card">
           <div className="feature-icon">🤖</div>
-          <h3>AI Investigation</h3>
-          <p>Show model explanations when available and clearly mark unavailable explanations for analysts.</p>
+          <h3>ML Fraud Detection</h3>
+          <p>HistGradientBoosting model with IsolationForest anomaly detection evaluates each application using real behavioral signals.</p>
         </div>
         <div className="feature-card glass-card">
-          <div className="feature-icon">⚡</div>
-          <h3>Real-Time Monitoring</h3>
-          <p>Analyze thousands of applications instantly and identify emerging risk patterns.</p>
+          <div className="feature-icon">🪪</div>
+          <h3>Identity Verification</h3>
+          <p>Aadhaar-based KYC with OCR extraction ensures only verified identities can submit loan applications.</p>
         </div>
         <div className="feature-card glass-card">
           <div className="feature-icon">🏦</div>
-          <h3>Smart Loan Approval</h3>
-          <p>Evaluate applications comprehensively using our Hybrid Rule+ML engine.</p>
+          <h3>Admin Risk Dashboard</h3>
+          <p>Full-featured admin panel with fraud scoring breakdowns, risk distribution charts, and per-application analysis.</p>
         </div>
       </div>
     </div>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
 import toast from "react-hot-toast";
 import api from "../services/api";
-import "./LoanForm.css";
-import "./Dashboard.css";
+import "./AdminDetail.css";
 
 function AdminApplicationDetail() {
   const { id } = useParams();
@@ -35,336 +35,295 @@ function AdminApplicationDetail() {
   };
 
   if (loading) {
-    return <div className="dashboard-page"><div className="skeleton-card glass-card"></div></div>;
+    return (
+      <div className="detail-page">
+        <div className="detail-nav">
+          <Link to="/dashboard" className="back-link">← Back to Dashboard</Link>
+        </div>
+        <div className="detail-body">
+          <div className="skeleton-block" style={{ height: 200 }} />
+          <div className="skeleton-block" style={{ height: 320 }} />
+        </div>
+      </div>
+    );
   }
 
   if (!analysis) {
-    return <div className="dashboard-page"><div className="empty-state glass-card">Analysis unavailable</div></div>;
+    return (
+      <div className="detail-page">
+        <div className="detail-nav">
+          <Link to="/dashboard" className="back-link">← Back to Dashboard</Link>
+        </div>
+        <div className="detail-body">
+          <div className="empty-box">Analysis data unavailable.</div>
+        </div>
+      </div>
+    );
   }
 
-  const app     = analysis.application;
-  const fa      = analysis.fraudAssessment    || {};
-  const is_     = analysis.identitySignals    || {};
-  const bs      = analysis.behavioralSignals  || {};
-  const ca      = analysis.creditAssessment   || {};
+  const app = analysis.application;
+  const fa  = analysis.fraudAssessment   || {};
+  const is_ = analysis.identitySignals   || {};
+  const bs  = analysis.behavioralSignals || {};
+  const ca  = analysis.creditAssessment  || {};
 
-  // ── Parse risk factors ─────────────────────────────────────────────────────
   let riskFactors = [];
   try {
     riskFactors = JSON.parse(analysis.fraudRiskFactors || "[]");
     if (!Array.isArray(riskFactors)) riskFactors = [];
   } catch { riskFactors = []; }
 
-  // ── Gauge values ───────────────────────────────────────────────────────────
-  const mlProbability = Number(app.mlFraudProbability || 0) * 100;
-  const mlProbText = mlProbability < 1 ? mlProbability.toFixed(2) : mlProbability.toFixed(1);
-  const finalScore = Number(fa.finalFraudRiskScore ?? app.riskScore ?? 0);
+  const mlProbability  = Number(app.mlFraudProbability || 0) * 100;
+  const mlProbText     = mlProbability < 1 ? mlProbability.toFixed(2) : mlProbability.toFixed(1);
+  const finalScore     = Number(fa.finalFraudRiskScore ?? app.riskScore ?? 0);
   const finalScoreText = finalScore.toFixed(1);
 
   const riskColor = (score) =>
-    score >= 65 ? "var(--danger)" : score >= 30 ? "var(--warning)" : "var(--success)";
+    score >= 65 ? "#ef4444" : score >= 30 ? "#f59e0b" : "#10b981";
 
   const fraudDecision = fa.fraudDecision || app.fraudDecision || app.decision || "UNKNOWN";
-  const decisionLabel = {
-    LOW_RISK:      { label: "Low Fraud Risk",         color: "var(--success)", icon: "✅" },
-    MANUAL_REVIEW: { label: "Manual Review Required",  color: "var(--warning)", icon: "⚠️" },
-    HIGH_RISK:     { label: "High Fraud Risk — Hold",  color: "var(--danger)",  icon: "🚨" },
-  }[fraudDecision] || { label: fraudDecision, color: "var(--text-secondary)", icon: "ℹ️" };
+  const decisionMeta = {
+    LOW_RISK:      { label: "Low Fraud Risk",        color: "#10b981", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)"  },
+    MANUAL_REVIEW: { label: "Manual Review Required", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)"  },
+    HIGH_RISK:     { label: "High Fraud Risk — Hold", color: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)"   },
+  }[fraudDecision] || { label: fraudDecision, color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "rgba(148,163,184,0.3)" };
 
-  // ── Factor badge color ─────────────────────────────────────────────────────
   const factorColor = (f) => {
-    if (f.includes("FAILED") || f.includes("HIGH") || f.includes("THRESHOLD")) return "var(--danger)";
-    if (f.includes("UNKNOWN") || f.includes("VELOCITY") || f.includes("REVIEW")) return "var(--warning)";
-    return "var(--info)";
+    if (f.includes("FAILED") || f.includes("HIGH") || f.includes("THRESHOLD")) return "#ef4444";
+    if (f.includes("UNKNOWN") || f.includes("VELOCITY") || f.includes("REVIEW"))  return "#f59e0b";
+    return "#3b82f6";
   };
 
   const pipelineEntries = Object.entries(analysis.pipeline || {});
 
   return (
-    <div className="loan-page">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="results-container glass-card">
-        <div className="results-header">
-          <div>
-            <h2>🛡️ Fraud Assessment</h2>
-            <p className="subtitle">Application FS-2026-{String(app.id).padStart(5, "0")} — {app.fullName}</p>
-          </div>
-          <Link to="/dashboard" className="btn-outline">← Back to Dashboard</Link>
+    <div className="detail-page">
+      {/* Top Nav */}
+      <nav className="detail-nav">
+        <div className="detail-nav-left">
+          <Link to="/dashboard" className="back-link">← Dashboard</Link>
+          <span className="detail-breadcrumb">
+            Application FS-2026-{String(app.id).padStart(5, "0")} — {app.fullName}
+          </span>
         </div>
+        <div
+          className="decision-pill"
+          style={{ background: decisionMeta.bg, color: decisionMeta.color, border: `1px solid ${decisionMeta.border}` }}
+        >
+          {decisionMeta.label}
+        </div>
+      </nav>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* SECTION 1: Fraud Assessment                                         */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <SectionHeader icon="🤖" title="Section 1 — Fraud Assessment (ML Model Output)" />
-        <div className="results-grid">
-          {/* ML Fraud Probability gauge */}
-          <div className="result-card">
-            <h4>ML Fraud Probability</h4>
-            <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "8px" }}>
-              HistGradientBoosting + CalibratedClassifierCV (sigmoid)
-            </p>
-            <div className="gauge-container">
+      <div className="detail-body">
+
+        {/* ── Section 1: Fraud Assessment ──────────────────────────────────── */}
+        <SectionHeader icon="🤖" title="Section 1 — Fraud Assessment" />
+
+        {/* Gauges + Details row */}
+        <div className="gauges-row">
+          {/* Gauge 1 */}
+          <div className="gauge-card glass-card">
+            <div className="gauge-label">ML Fraud Probability</div>
+            <div className="gauge-sub">HistGradientBoosting + CalibratedClassifierCV</div>
+            <div className="gauge-wrap">
               <CircularProgressbar
                 value={mlProbability}
                 text={`${mlProbText}%`}
                 styles={buildStyles({
-                  pathColor: riskColor(mlProbability),
-                  textColor: "var(--text-primary)",
-                  trailColor: "var(--border-glass)"
+                  pathColor:  riskColor(mlProbability),
+                  textColor:  "#f1f5f9",
+                  trailColor: "rgba(255,255,255,0.08)",
+                  textSize:   "18px",
                 })}
               />
             </div>
-            <p className="recommendation">
+            <div className="gauge-footer">
               ML Says: <strong>{fa.mlRecommendation || app.mlRecommendation || "N/A"}</strong>
-            </p>
-            <p style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center" }}>
-              Model: {fa.modelVersion || app.modelVersion || "N/A"}
-            </p>
+            </div>
+            <div className="gauge-model">Model: {fa.modelVersion || app.modelVersion || "N/A"}</div>
           </div>
 
-          {/* Final Fraud Risk gauge */}
-          <div className="result-card">
-            <h4>Final Fraud Risk Score</h4>
-            <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "8px" }}>
-              ML (0.55) + Identity (0.15) + Device (0.10) + Velocity (0.10) + Location (0.10)
-            </p>
-            <div className="gauge-container">
+          {/* Gauge 2 */}
+          <div className="gauge-card glass-card">
+            <div className="gauge-label">Final Fraud Risk Score</div>
+            <div className="gauge-sub">ML (55%) + Identity + Device + Velocity + Location</div>
+            <div className="gauge-wrap">
               <CircularProgressbar
                 value={finalScore}
-                text={`${finalScoreText}`}
+                text={finalScoreText}
                 styles={buildStyles({
-                  pathColor: riskColor(finalScore),
-                  textColor: "var(--text-primary)",
-                  trailColor: "var(--border-glass)"
+                  pathColor:  riskColor(finalScore),
+                  textColor:  "#f1f5f9",
+                  trailColor: "rgba(255,255,255,0.08)",
+                  textSize:   "18px",
                 })}
               />
             </div>
-            <div style={{ textAlign: "center", marginTop: "12px" }}>
-              <span style={{
-                display: "inline-block",
-                padding: "6px 18px",
-                borderRadius: "999px",
-                background: `${decisionLabel.color}20`,
-                color: decisionLabel.color,
-                border: `1px solid ${decisionLabel.color}`,
-                fontWeight: 700,
-                fontSize: "14px"
-              }}>
-                {decisionLabel.icon} {decisionLabel.label}
-              </span>
-            </div>
+            <div className="gauge-footer">Decision Source: <strong>{fa.decisionSource || app.decisionSource || "RULES"}</strong></div>
+            <div className="gauge-model">Status: {app.status?.replace(/_/g, " ")}</div>
           </div>
 
-          <div className="result-details">
-            <h3>Assessment Details</h3>
-            <Detail label="Final Fraud Risk Score" value={`${finalScore} / 100`} />
-            <Detail label="ML Fraud Probability"   value={fa.mlFraudProbabilityPct || (app.mlFraudProbability != null ? `${(app.mlFraudProbability*100).toFixed(2)}%` : "N/A")} />
-            <Detail label="Anomaly Score (IsolationForest)" value={fa.anomalyScore != null ? fa.anomalyScore.toFixed(6) : (app.anomalyScore != null ? app.anomalyScore.toFixed(6) : "N/A")} />
-            <Detail label="Fraud Decision"          value={fraudDecision?.replace(/_/g, " ")} />
-            <Detail label="Application Status"      value={app.status?.replace(/_/g, " ")} />
-            <Detail label="Decision Source"         value={fa.decisionSource || app.decisionSource} />
-            <Detail label="Model Version"           value={fa.modelVersion || app.modelVersion || "N/A"} />
+          {/* Details panel */}
+          <div className="detail-panel glass-card">
+            <div className="panel-title">Assessment Details</div>
+            <Row label="Final Risk Score"     value={`${finalScore} / 100`} />
+            <Row label="ML Fraud Probability" value={fa.mlFraudProbabilityPct || (app.mlFraudProbability != null ? `${(app.mlFraudProbability * 100).toFixed(2)}%` : "N/A")} />
+            <Row label="Anomaly Score"        value={fa.anomalyScore != null ? fa.anomalyScore.toFixed(6) : (app.anomalyScore != null ? app.anomalyScore.toFixed(6) : "N/A")} />
+            <Row label="Fraud Decision"       value={fraudDecision?.replace(/_/g, " ")} />
+            <Row label="Application Status"   value={app.status?.replace(/_/g, " ")} />
+            <Row label="Decision Source"      value={fa.decisionSource || app.decisionSource} />
+            <Row label="Model Version"        value={fa.modelVersion || app.modelVersion || "N/A"} />
           </div>
         </div>
 
         {/* Score Breakdown */}
-        <div className="summary-section full-width" style={{ marginTop: "8px" }}>
-          <h3>📊 Fraud Score Breakdown</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginTop: "12px" }}>
-            <ScoreBar label="ML Probability" value={mlProbability} weight={0.55} color="var(--info)" />
-            <ScoreBar label="Identity Risk"  value={fa.identityRiskScore ?? app.identityRiskScore ?? 0} weight={0.15} color="var(--warning)" />
-            <ScoreBar label="Device Risk"    value={fa.deviceRiskScore   ?? app.deviceRiskScore   ?? 0} weight={0.10} color="var(--warning)" />
-            <ScoreBar label="Velocity Risk"  value={fa.velocityRiskScore ?? app.velocityRiskScore ?? 0} weight={0.10} color="var(--warning)" />
-            <ScoreBar label="Location Risk"  value={fa.locationRiskScore ?? app.locationRiskScore ?? 0} weight={0.10} color="var(--warning)" />
+        <div className="section-card glass-card">
+          <div className="panel-title">📊 Fraud Score Breakdown</div>
+          <div className="score-bars-grid">
+            <ScoreBar label="ML Probability" value={mlProbability}                                          weight={0.55} color="#3b82f6" />
+            <ScoreBar label="Identity Risk"  value={fa.identityRiskScore ?? app.identityRiskScore ?? 0}    weight={0.15} color="#f59e0b" />
+            <ScoreBar label="Device Risk"    value={fa.deviceRiskScore   ?? app.deviceRiskScore   ?? 0}    weight={0.10} color="#f59e0b" />
+            <ScoreBar label="Velocity Risk"  value={fa.velocityRiskScore ?? app.velocityRiskScore ?? 0}    weight={0.10} color="#f59e0b" />
+            <ScoreBar label="Location Risk"  value={fa.locationRiskScore ?? app.locationRiskScore ?? 0}    weight={0.10} color="#f59e0b" />
           </div>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
-            finalFraudRisk = (0.55 × ML%) + (0.15 × identity) + (0.10 × device) + (0.10 × velocity) + (0.10 × location) — Weights configurable in application.properties
+          <p className="formula-note">
+            finalRisk = (0.55 × ML%) + (0.15 × identity) + (0.10 × device) + (0.10 × velocity) + (0.10 × location)
           </p>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* SECTION 2: Identity & Behavioral Signals                             */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* ── Section 2: Identity & Behavioral ────────────────────────────── */}
         <SectionHeader icon="🪪" title="Section 2 — Identity & Behavioral Signals" />
-        <div className="results-grid">
-          <div className="result-details">
-            <h3>Identity Signals</h3>
-            <Detail label="Aadhaar Verified"      value={is_.aadhaarVerified    ? "✅ YES" : "❌ NO"} />
-            <Detail label="Mobile OTP Verified"   value={is_.mobileOtpVerified  ? "✅ YES" : "❌ NO"} />
-            <Detail label="Masked Aadhaar"        value={is_.maskedAadhaar || app.maskedAadhaar || "N/A"} />
-            <Detail label="Identity Risk Score"   value={`${fa.identityRiskScore ?? app.identityRiskScore ?? 0} / 100`} />
+        <div className="three-col-grid">
+          <div className="detail-panel glass-card">
+            <div className="panel-title">Identity Signals</div>
+            <Row label="Aadhaar Verified"    value={is_.aadhaarVerified   ? "✅ YES" : "❌ NO"} />
+            <Row label="Mobile OTP Verified" value={is_.mobileOtpVerified ? "✅ YES" : "❌ NO"} />
+            <Row label="Masked Aadhaar"      value={is_.maskedAadhaar || app.maskedAadhaar || "N/A"} />
+            <Row label="Identity Risk Score" value={`${fa.identityRiskScore ?? app.identityRiskScore ?? 0} / 100`} />
           </div>
-          <div className="result-details">
-            <h3>Device & Location Signals</h3>
-            <Detail label="Device Known"          value={bs.deviceKnown  || app.deviceKnown  || "N/A"} />
-            <Detail label="Device Risk"           value={bs.deviceRisk   || app.deviceRisk   || "N/A"} />
-            <Detail label="Device Risk Score"     value={`${fa.deviceRiskScore ?? app.deviceRiskScore ?? 0} / 100`} />
-            <Detail label="Location Risk"         value={bs.locationRisk || app.locationRisk || "N/A"} />
-            <Detail label="Location Risk Score"   value={`${fa.locationRiskScore ?? app.locationRiskScore ?? 0} / 100`} />
-            <Detail label="Applicant IP"          value={bs.applicantIp  || app.applicantIp  || "N/A"} />
-            <Detail label="City / State"          value={`${bs.city || app.city || "N/A"} / ${bs.state || app.state || "N/A"}`} />
+          <div className="detail-panel glass-card">
+            <div className="panel-title">Device & Location</div>
+            <Row label="Device Known"       value={bs.deviceKnown  || app.deviceKnown  || "N/A"} />
+            <Row label="Device Risk"        value={bs.deviceRisk   || app.deviceRisk   || "N/A"} />
+            <Row label="Device Risk Score"  value={`${fa.deviceRiskScore ?? app.deviceRiskScore ?? 0} / 100`} />
+            <Row label="Location Risk"      value={bs.locationRisk || app.locationRisk || "N/A"} />
+            <Row label="Location Score"     value={`${fa.locationRiskScore ?? app.locationRiskScore ?? 0} / 100`} />
+            <Row label="Applicant IP"       value={bs.applicantIp  || app.applicantIp  || "N/A"} />
+            <Row label="City / State"       value={`${bs.city || app.city || "N/A"} / ${bs.state || app.state || "N/A"}`} />
           </div>
-          <div className="result-details">
-            <h3>Velocity Signals (via ML Engine)</h3>
-            <Detail label="Velocity Risk Score"   value={`${fa.velocityRiskScore ?? app.velocityRiskScore ?? 0} / 100`} />
-            <Detail label="Note" value="identityApplications24h and deviceIdentities24h are computed server-side by the ML engine from its prediction history" />
-            <Detail label="Session / Login telemetry" value="sessionSeconds, failedLogins24h, ipChanged = -1 (missing — requires browser instrumentation)" />
+          <div className="detail-panel glass-card">
+            <div className="panel-title">Velocity (ML Engine)</div>
+            <Row label="Velocity Risk Score" value={`${fa.velocityRiskScore ?? app.velocityRiskScore ?? 0} / 100`} />
+            <Row label="Source"              value="identityApplications24h & deviceIdentities24h computed server-side" />
+            <Row label="Session telemetry"   value="sessionSeconds, failedLogins24h, ipChanged = -1 (missing — browser instrumentation required)" />
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* SECTION 3: Fraud Risk Factors                                        */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* ── Section 3: Risk Factors ──────────────────────────────────────── */}
         <SectionHeader icon="⚠️" title="Section 3 — Fraud Risk Factors" />
-        <div className="summary-section full-width">
+        <div className="section-card glass-card">
           {riskFactors.length === 0 ? (
-            <p style={{ color: "var(--success)", fontWeight: 600 }}>✅ No significant fraud risk factors detected</p>
+            <p style={{ color: "#10b981", fontWeight: 600 }}>✅ No significant fraud risk factors detected</p>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
+            <div className="factor-chips">
               {riskFactors.map((factor) => (
-                <span key={factor} style={{
-                  display: "inline-block",
-                  padding: "4px 14px",
-                  borderRadius: "999px",
-                  background: `${factorColor(factor)}20`,
-                  color: factorColor(factor),
-                  border: `1px solid ${factorColor(factor)}`,
-                  fontWeight: 600,
-                  fontSize: "12px",
-                  fontFamily: "monospace"
-                }}>
+                <span
+                  key={factor}
+                  className="factor-chip"
+                  style={{ color: factorColor(factor), background: `${factorColor(factor)}18`, borderColor: `${factorColor(factor)}55` }}
+                >
                   {factor}
                 </span>
               ))}
             </div>
           )}
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "12px" }}>
-            CLASSIFIER_REVIEW_THRESHOLD = ML probability exceeded model review threshold.<br/>
-            UNUSUAL_BEHAVIOUR_REVIEW = IsolationForest detected an anomalous behavioral pattern.<br/>
-            INSUFFICIENT_TELEMETRY = ≥4 behavioral features were missing (sent as -1).
+          <p className="formula-note" style={{ marginTop: 12 }}>
+            CLASSIFIER_REVIEW_THRESHOLD = ML probability exceeded model review threshold.<br />
+            UNUSUAL_BEHAVIOUR_REVIEW = IsolationForest detected an anomalous behavioral pattern.<br />
+            INSUFFICIENT_TELEMETRY = ≥4 behavioral features were missing.
           </p>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* SECTION 4: Credit Assessment (Separate — NOT fraud)                  */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* ── Section 4: Credit Assessment ────────────────────────────────── */}
         <SectionHeader icon="💳" title="Section 4 — Credit Assessment (Separate from Fraud)" />
-        <div className="summary-section full-width">
-          <div style={{
-            padding: "10px 16px",
-            borderRadius: "8px",
-            background: "rgba(59,130,246,0.08)",
-            border: "1px solid rgba(59,130,246,0.3)",
-            color: "var(--info)",
-            fontSize: "13px",
-            marginBottom: "16px",
-            lineHeight: "1.6"
-          }}>
-            <strong>ℹ️ Important:</strong> Credit data below is evaluated <em>separately</em> by the lending team.
-            Credit score, income, employment type and loan amount are <strong>NOT</strong> fraud indicators
-            and are <strong>not included</strong> in the fraud risk score above.
-            A low fraud risk score means <em>"No significant fraud indicators detected — continue normal lending process."</em>
-            It does <strong>NOT</strong> mean <em>"Loan is approved."</em>
+        <div className="section-card glass-card">
+          <div className="info-banner">
+            <strong>ℹ️ Important:</strong> Credit data is evaluated <em>separately</em> by the lending team.
+            Credit score, income, employment type and loan amount are <strong>NOT</strong> fraud indicators and
+            are <strong>not included</strong> in the fraud risk score above.
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px" }}>
-            <Detail label="Credit Score"       value={ca.creditScore ?? app.creditScore ?? "N/A"} />
-            <Detail label="Annual Income"      value={ca.annualIncome ? `₹${Number(ca.annualIncome).toLocaleString()}` : "N/A"} />
-            <Detail label="Loan Amount"        value={ca.loanAmount ? `₹${Number(ca.loanAmount).toLocaleString()}` : "N/A"} />
-            <Detail label="Loan-to-Income"     value={ca.loanToIncomeRatioPct || "N/A"} />
-            <Detail label="Employment Type"    value={ca.employmentType ?? app.employmentType ?? "N/A"} />
-            <Detail label="Existing Loans"     value={ca.existingLoans ?? app.existingLoans ?? "N/A"} />
-            <Detail label="Loan Purpose"       value={ca.loanPurpose ?? app.loanPurpose ?? "N/A"} />
+          <div className="credit-grid">
+            <Row label="Credit Score"    value={ca.creditScore ?? app.creditScore ?? "N/A"} />
+            <Row label="Annual Income"   value={ca.annualIncome ? `₹${Number(ca.annualIncome).toLocaleString()}` : "N/A"} />
+            <Row label="Loan Amount"     value={ca.loanAmount  ? `₹${Number(ca.loanAmount).toLocaleString()}`  : "N/A"} />
+            <Row label="Loan-to-Income"  value={ca.loanToIncomeRatioPct || "N/A"} />
+            <Row label="Employment Type" value={ca.employmentType ?? app.employmentType ?? "N/A"} />
+            <Row label="Existing Loans"  value={ca.existingLoans ?? app.existingLoans ?? "N/A"} />
+            <Row label="Loan Purpose"    value={ca.loanPurpose  ?? app.loanPurpose   ?? "N/A"} />
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* SECTION 5: AI Analyst Summary (Mistral)                              */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* ── Section 5: AI Analyst ────────────────────────────────────────── */}
         <SectionHeader icon="🧠" title="Section 5 — AI Analyst Summary (Mistral)" />
-        <div className="summary-section full-width">
-          <p style={{ color: "var(--text-muted)", fontSize: "13px", marginBottom: "12px" }}>
+        <div className="section-card glass-card">
+          <p className="section-note">
             Mistral summarises the fraud analysis in natural language. It does NOT calculate scores or make lending decisions.
           </p>
           {aiReview ? (
-            <div style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border-glass)",
-              borderRadius: "8px",
-              padding: "16px",
-              color: "var(--text-primary)",
-              whiteSpace: "pre-wrap",
-              fontSize: "14px",
-              lineHeight: "1.7"
-            }}>
-              {aiReview}
-            </div>
+            <div className="ai-review-box">{aiReview}</div>
           ) : (
-            <button
-              onClick={generateAiReview}
-              className="btn-primary"
-              disabled={aiLoading}
-              style={{ marginTop: "4px" }}
-            >
-              {aiLoading ? "Generating AI Review..." : "🧠 Generate AI Analyst Review"}
+            <button onClick={generateAiReview} className="btn-primary" disabled={aiLoading}>
+              {aiLoading ? "Generating AI Review…" : "🧠 Generate AI Analyst Review"}
             </button>
           )}
         </div>
 
-        {/* ── Technical Debug (collapsed by default) ──────────────────────── */}
-        <div style={{ marginTop: "24px" }}>
+        {/* ── Raw Pipeline (collapsed) ─────────────────────────────────────── */}
+        <div style={{ marginTop: 20 }}>
           <button
             onClick={() => setShowRawPipeline(!showRawPipeline)}
-            className="btn-outline"
-            style={{ fontSize: "12px", padding: "6px 14px" }}
+            className="btn-toggle"
           >
             {showRawPipeline ? "▲ Hide" : "▼ Show"} Raw ML Input Pipeline (technical)
           </button>
           {showRawPipeline && (
-            <div className="summary-section full-width" style={{ marginTop: "12px" }}>
-              <h3>ML Input Pipeline</h3>
-              {pipelineEntries.map(([label, value]) => (
-                <div className="detail-row" key={label}>
-                  <span>{label}</span>
-                  <strong className="pipeline-value">
-                    {typeof value === "number"
-                      ? value < 1 && value > 0 ? `${(value * 100).toFixed(1)}%` : value
-                      : String(value || "UNKNOWN")}
-                  </strong>
-                </div>
-              ))}
+            <div className="section-card glass-card" style={{ marginTop: 12 }}>
+              <div className="panel-title">ML Input Pipeline</div>
+              <div className="pipeline-grid">
+                {pipelineEntries.map(([label, value]) => (
+                  <Row
+                    key={label}
+                    label={label}
+                    value={typeof value === "number"
+                      ? (value < 1 && value > 0 ? `${(value * 100).toFixed(1)}%` : value)
+                      : String(value ?? "UNKNOWN")}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
+
       </div>
     </div>
   );
 }
 
-// ── Subcomponents ─────────────────────────────────────────────────────────────
+/* ── Sub-components ────────────────────────────────────────────────────────── */
 
 function SectionHeader({ icon, title }) {
   return (
-    <div style={{
-      margin: "28px 0 12px",
-      padding: "10px 16px",
-      background: "rgba(255,255,255,0.04)",
-      borderLeft: "3px solid var(--info)",
-      borderRadius: "0 8px 8px 0",
-      fontWeight: 700,
-      fontSize: "14px",
-      color: "var(--text-primary)",
-      letterSpacing: "0.02em"
-    }}>
+    <div className="section-header">
       {icon} {title}
     </div>
   );
 }
 
-function Detail({ label, value }) {
+function Row({ label, value }) {
   return (
     <div className="detail-row">
-      <span>{label}</span>
-      <strong className="detail-value">{value ?? "UNKNOWN"}</strong>
+      <span className="row-label">{label}</span>
+      <strong className="row-value">{value ?? "—"}</strong>
     </div>
   );
 }
@@ -373,13 +332,15 @@ function ScoreBar({ label, value, weight, color }) {
   const num = Number(value) || 0;
   const contribution = (weight * num).toFixed(1);
   return (
-    <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "10px 14px" }}>
-      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>{label}</div>
-      <div style={{ fontSize: "18px", fontWeight: 700, color }}>{num.toFixed(0)}<span style={{ fontSize: "11px", color: "var(--text-muted)" }}>/100</span></div>
-      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>weight {weight} → contributes <strong style={{ color }}>{contribution}</strong></div>
-      <div style={{ background: "var(--border-glass)", borderRadius: "4px", height: "4px", marginTop: "6px" }}>
-        <div style={{ width: `${Math.min(num, 100)}%`, background: color, height: "4px", borderRadius: "4px", transition: "width 0.5s" }}></div>
+    <div className="score-bar-item">
+      <div className="score-bar-top">
+        <span className="score-bar-label">{label}</span>
+        <span className="score-bar-value" style={{ color }}>{num.toFixed(0)}<span className="score-bar-max">/100</span></span>
       </div>
+      <div className="score-bar-track">
+        <div className="score-bar-fill" style={{ width: `${Math.min(num, 100)}%`, background: color }} />
+      </div>
+      <div className="score-bar-contrib">weight {weight} → contributes <strong style={{ color }}>{contribution}</strong></div>
     </div>
   );
 }

@@ -17,8 +17,9 @@ function MyApplications() {
 
   return (
     <div className="dashboard-page">
-      <nav className="dashboard-nav glass-card">
-        <h2>My Applications</h2>
+      {/* Nav */}
+      <nav className="dashboard-nav">
+        <h2>📋 My Applications</h2>
         <div className="nav-actions">
           <Link to="/verify" className="nav-link">Identity</Link>
           <Link to="/loan" className="nav-link">Apply Loan</Link>
@@ -26,39 +27,58 @@ function MyApplications() {
         </div>
       </nav>
 
-      {loading ? (
-        <div className="skeleton-card glass-card"></div>
-      ) : applications.length === 0 ? (
-        <div className="empty-state glass-card">
-          <p>No applications submitted yet.</p>
-          <Link to="/loan" className="btn-primary">Start Application</Link>
+      <div className="dashboard-body">
+        <div className="dashboard-header">
+          <h1>My Loan Applications</h1>
+          <p>Track the status of your submitted applications</p>
         </div>
-      ) : (
-        <div className="table-wrapper glass-card">
-          <table className="applications-table">
-            <thead>
-              <tr>
-                <th>Application ID</th>
-                <th>Loan Amount</th>
-                <th>Submitted Date</th>
-                <th>Status</th>
-                <th>Identity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((app) => (
-                <tr key={app.id}>
-                  <td>{app.applicationId}</td>
-                  <td>₹{Number(app.loanAmount).toLocaleString()}</td>
-                  <td>{app.submittedDate ? new Date(app.submittedDate).toLocaleString() : "Processing"}</td>
-                  <td><span className="source-badge">{app.status?.replace(/_/g, " ")}</span></td>
-                  <td>{app.identityVerified ? "Verified" : "Pending"}</td>
+
+        {loading ? (
+          <div className="skeleton-card glass-card" style={{ height: 200 }} />
+        ) : applications.length === 0 ? (
+          <div className="empty-state glass-card" style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+            <p>No applications submitted yet.</p>
+            <Link to="/loan" className="btn-primary">Start an Application</Link>
+          </div>
+        ) : (
+          <div className="table-wrapper glass-card">
+            <table className="applications-table">
+              <thead>
+                <tr>
+                  <th>Application ID</th>
+                  <th>Loan Amount</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Identity</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {applications.map((app) => (
+                  <tr key={app.id}>
+                    <td className="font-medium">{app.applicationId}</td>
+                    <td>₹{Number(app.loanAmount).toLocaleString()}</td>
+                    <td>
+                      {app.submittedDate
+                        ? new Date(app.submittedDate).toLocaleDateString("en-IN", {
+                            day: "numeric", month: "short", year: "numeric",
+                          })
+                        : "—"}
+                    </td>
+                    <td>
+                      <span className="badge badge-manual-review" style={{ background: "rgba(99,102,241,0.12)", color: "#a5b4fc", borderColor: "rgba(99,102,241,0.25)" }}>
+                        {app.status?.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td style={{ color: app.identityVerified ? "var(--success)" : "var(--text-muted)" }}>
+                      {app.identityVerified ? "✓ Verified" : "⏳ Pending"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

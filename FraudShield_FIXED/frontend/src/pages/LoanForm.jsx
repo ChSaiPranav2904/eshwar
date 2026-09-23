@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
-import "react-circular-progressbar/dist/styles.css";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -41,7 +39,6 @@ function LoanForm() {
       });
   }, [isAuthenticated, navigate]);
 
-  // Form State
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -49,18 +46,14 @@ function LoanForm() {
     nationalIdType: "",
     nationalIdNumber: "",
     nationality: "INDIAN",
-    
     annualIncome: "",
     loanAmount: "",
     creditScore: "",
     existingLoans: "",
-    
     employmentType: "",
     loanPurpose: "",
-    
-    // Location fields
     city: "",
-    state: ""
+    state: "",
   });
 
   const handleChange = (e) => {
@@ -69,7 +62,7 @@ function LoanForm() {
   };
 
   const validateStep = (currentStep) => {
-    switch(currentStep) {
+    switch (currentStep) {
       case 1:
         if (!formData.fullName || !formData.email || !formData.age || !formData.city || !formData.state) {
           toast.error("Please fill all personal info fields");
@@ -105,26 +98,15 @@ function LoanForm() {
     }
   };
 
-  const nextStep = () => {
-    if (validateStep(step)) {
-      setStep(step + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
+  const nextStep = () => { if (validateStep(step)) setStep(step + 1); };
+  const prevStep = () => { if (step > 1) setStep(step - 1); };
 
   const submitLoan = async () => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       toast.error("Please fix validation errors before submitting");
       return;
     }
-
     setIsSubmitting(true);
-    
     try {
       const payload = {
         ...formData,
@@ -132,9 +114,8 @@ function LoanForm() {
         annualIncome: Number(formData.annualIncome),
         loanAmount: Number(formData.loanAmount),
         creditScore: Number(formData.creditScore),
-        existingLoans: Number(formData.existingLoans)
+        existingLoans: Number(formData.existingLoans),
       };
-
       const response = await api.post("/api/loans", payload);
       setMlResult(response.data);
       setShowResults(true);
@@ -146,62 +127,57 @@ function LoanForm() {
     }
   };
 
-  const identityBadgeColor = "var(--success)";
-
-
+  // ── Results View ────────────────────────────────────────────────────────────
   if (showResults && mlResult) {
-    const decisionColor = "var(--warning)";
-
-    // ─── USER VIEW: Simple, clean result ───
     return (
       <div className="loan-page">
         <div className="results-container glass-card">
-          <div className="results-header" style={{ flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '64px' }}>✓</div>
-            <h2 style={{ fontSize: '28px' }}>
-              Application Submitted Successfully
-            </h2>
-            <div className="decision-badge" style={{ backgroundColor: `${decisionColor}20`, color: decisionColor, border: `1px solid ${decisionColor}`, fontSize: '18px', padding: '10px 24px' }}>
-              {mlResult.status?.replace(/_/g, ' ') || "UNDER REVIEW"}
+          <div style={{ textAlign: "center", padding: "16px 0 28px" }}>
+            <div style={{ fontSize: "52px", marginBottom: "16px" }}>✓</div>
+            <h2 style={{ fontSize: "24px", marginBottom: "12px" }}>Application Submitted</h2>
+            <div
+              className="decision-badge"
+              style={{
+                backgroundColor: "rgba(245,158,11,0.15)",
+                color: "var(--warning)",
+                border: "1px solid rgba(245,158,11,0.3)",
+                display: "inline-block",
+                marginBottom: "16px",
+              }}
+            >
+              {mlResult.status?.replace(/_/g, " ") || "UNDER REVIEW"}
             </div>
-          </div>
-          
-          <div style={{ textAlign: 'center', padding: '20px 40px', color: 'var(--text-secondary)', fontSize: '16px', lineHeight: '1.7' }}>
-            <p>Your application has been successfully submitted. Our fraud screening system is reviewing the information provided. You can track the status from My Applications.</p>
+            <p style={{ color: "var(--text-muted)", fontSize: "14px", maxWidth: "440px", margin: "0 auto", lineHeight: "1.7" }}>
+              Your application is under fraud screening review. Track its status from My Applications.
+            </p>
           </div>
 
-          <div className="results-grid" style={{ maxWidth: '500px', margin: '0 auto' }}>
-            <div className="result-details" style={{ width: '100%' }}>
-              <h3>Application Summary</h3>
-              <div className="detail-row">
-                <span>Application ID</span>
-                <strong>{mlResult.applicationId}</strong>
-              </div>
-              <div className="detail-row">
-                <span>Loan Amount</span>
-                <strong>₹{Number(mlResult.loanAmount).toLocaleString()}</strong>
-              </div>
-              <div className="detail-row">
-                <span>Purpose</span>
-                <strong>{mlResult.loanPurpose}</strong>
-              </div>
-              <div className="detail-row">
-                <span>Identity</span>
-                <span className="source-badge" style={{ color: "var(--success)" }}>{mlResult.identityVerified ? "✅ Verified" : "⏳ Pending"}</span>
-              </div>
-              <div className="detail-row">
-                <span>Fraud Screening</span>
-                <span className="source-badge" style={{ color: identityBadgeColor }}>
-                  {mlResult.fraudScreeningStatus || mlResult.status?.replace(/_/g, ' ') || 'Under Review'}
-                </span>
-              </div>
+          <div className="result-details" style={{ maxWidth: "460px", margin: "0 auto" }}>
+            <h3>Application Summary</h3>
+            <div className="detail-row">
+              <span>Application ID</span>
+              <strong>{mlResult.applicationId}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Loan Amount</span>
+              <strong>₹{Number(mlResult.loanAmount).toLocaleString()}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Purpose</span>
+              <strong>{mlResult.loanPurpose}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Identity</span>
+              <span className="source-badge">
+                {mlResult.identityVerified ? "✓ Verified" : "⏳ Pending"}
+              </span>
+            </div>
+            <div className="detail-row">
+              <span>Submitted</span>
+              <strong>{new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</strong>
             </div>
           </div>
-          
-          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            Application ID: {mlResult.applicationId} • Processed on {new Date().toLocaleDateString()}
-          </div>
-          
+
           <div className="results-actions">
             <Link to="/my-applications" className="btn-primary">My Applications</Link>
             <Link to="/" className="btn-outline">Back to Home</Link>
@@ -211,29 +187,31 @@ function LoanForm() {
     );
   }
 
+  // ── Form View ───────────────────────────────────────────────────────────────
   return (
     <div className="loan-page">
       <div className="loan-header">
         <div className="progress-container">
           <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${(step / 4) * 100}%` }}></div>
+            <div className="progress-fill" style={{ width: `${(step / 4) * 100}%` }} />
           </div>
           <div className="step-labels">
-            <span className={step >= 1 ? 'active' : ''}>Personal</span>
-            <span className={step >= 2 ? 'active' : ''}>Financial</span>
-            <span className={step >= 3 ? 'active' : ''}>Employment</span>
-            <span className={step >= 4 ? 'active' : ''}>Review</span>
+            <span className={step >= 1 ? "active" : ""}>Personal</span>
+            <span className={step >= 2 ? "active" : ""}>Financial</span>
+            <span className={step >= 3 ? "active" : ""}>Employment</span>
+            <span className={step >= 4 ? "active" : ""}>Review</span>
           </div>
         </div>
         <h1>Loan Application</h1>
-        <p className="subtitle">Secure application with ML-powered fraud screening &amp; identity verification</p>
+        <p className="subtitle">Secure application with ML-powered fraud screening</p>
       </div>
 
       <div className="loan-container">
         <div className="loan-card glass-card">
+          {/* Step 1 */}
           {step === 1 && (
             <div className="form-step slide-in">
-              <h2>Step 1: Personal Information</h2>
+              <h2>Step 1 — Personal Information</h2>
               <div className="form-grid">
                 <div className="input-group">
                   <label htmlFor="fullName">Full Name</label>
@@ -266,9 +244,10 @@ function LoanForm() {
             </div>
           )}
 
+          {/* Step 2 */}
           {step === 2 && (
             <div className="form-step slide-in">
-              <h2>Step 2: Financial Details</h2>
+              <h2>Step 2 — Financial Details</h2>
               <div className="form-grid">
                 <div className="input-group">
                   <label htmlFor="annualIncome">Annual Income (₹)</label>
@@ -279,7 +258,7 @@ function LoanForm() {
                   <input id="loanAmount" name="loanAmount" type="number" value={formData.loanAmount} onChange={handleChange} placeholder="e.g. 500000" />
                 </div>
                 <div className="input-group">
-                  <label htmlFor="creditScore">Credit Score (300-900)</label>
+                  <label htmlFor="creditScore">Credit Score (300–900)</label>
                   <input id="creditScore" name="creditScore" type="number" value={formData.creditScore} onChange={handleChange} placeholder="e.g. 750" />
                 </div>
                 <div className="input-group">
@@ -290,9 +269,10 @@ function LoanForm() {
             </div>
           )}
 
+          {/* Step 3 */}
           {step === 3 && (
             <div className="form-step slide-in">
-              <h2>Step 3: Employment & Purpose</h2>
+              <h2>Step 3 — Employment &amp; Purpose</h2>
               <div className="form-grid">
                 <div className="input-group">
                   <label htmlFor="employmentType">Employment Type</label>
@@ -319,9 +299,10 @@ function LoanForm() {
             </div>
           )}
 
+          {/* Step 4 — Review */}
           {step === 4 && (
             <div className="form-step slide-in">
-              <h2>Step 4: Review & Submit</h2>
+              <h2>Step 4 — Review &amp; Submit</h2>
               <div className="summary-grid">
                 <div className="summary-section">
                   <div className="summary-header">
@@ -331,7 +312,6 @@ function LoanForm() {
                   <p><strong>Name:</strong> {formData.fullName}</p>
                   <p><strong>Email:</strong> {formData.email}</p>
                   <p><strong>Age:</strong> {formData.age}</p>
-                  <p><strong>Identity:</strong> Verified before submission</p>
                   <p><strong>Location:</strong> {formData.city}, {formData.state}</p>
                 </div>
                 <div className="summary-section">
@@ -340,13 +320,13 @@ function LoanForm() {
                     <button onClick={() => setStep(2)} className="btn-edit">Edit</button>
                   </div>
                   <p><strong>Income:</strong> ₹{Number(formData.annualIncome).toLocaleString()}</p>
-                  <p><strong>Loan Amt:</strong> ₹{Number(formData.loanAmount).toLocaleString()}</p>
+                  <p><strong>Loan Amount:</strong> ₹{Number(formData.loanAmount).toLocaleString()}</p>
                   <p><strong>Credit Score:</strong> {formData.creditScore}</p>
                   <p><strong>Existing EMI:</strong> ₹{Number(formData.existingLoans).toLocaleString()}</p>
                 </div>
                 <div className="summary-section full-width">
                   <div className="summary-header">
-                    <h3>Employment & Purpose</h3>
+                    <h3>Employment &amp; Purpose</h3>
                     <button onClick={() => setStep(3)} className="btn-edit">Edit</button>
                   </div>
                   <p><strong>Employment:</strong> {formData.employmentType}</p>
@@ -356,63 +336,51 @@ function LoanForm() {
             </div>
           )}
 
+          {/* Navigation */}
           <div className="form-actions">
             {step > 1 ? (
-              <button onClick={prevStep} className="btn-secondary" disabled={isSubmitting}>Back</button>
+              <button onClick={prevStep} className="btn-outline" disabled={isSubmitting}>← Back</button>
             ) : (
-              <div></div> /* Spacer */
+              <div />
             )}
-            
             {step < 4 ? (
-              <button onClick={nextStep} className="btn-primary">Next Step</button>
+              <button onClick={nextStep} className="btn-primary">Next →</button>
             ) : (
               <button onClick={submitLoan} className="btn-submit" disabled={isSubmitting}>
-                {isSubmitting ? <div className="spinner" style={{width:'20px', height:'20px', margin:0}}></div> : "🚀 Submit Application"}
+                {isSubmitting
+                  ? <div className="spinner" style={{ width: "18px", height: "18px", margin: 0 }} />
+                  : "Submit Application"}
               </button>
             )}
           </div>
         </div>
 
-        {/* Identity & Security Sidebar */}
+        {/* Sidebar */}
         <div className="preview-card glass-card">
-          <h2>🔒 Identity &amp; Security</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            The following checks are performed automatically during your application.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <SecurityCheck
+          <h2>🔒 Security Checks</h2>
+          <div className="security-checks">
+            <SecurityItem
               done={true}
               label="Identity Verified (Aadhaar)"
-              sublabel="Demo KYC — OCR extraction + manual check"
+              sublabel="KYC completed before application"
             />
-            <SecurityCheck
-              done={true}
-              label="Mobile OTP Verified"
-              sublabel="One-time password sent to registered number"
-            />
-            <SecurityCheck
+            <SecurityItem
               done={!!formData.city && !!formData.state}
-              label="Location captured"
-              sublabel={formData.city && formData.state ? `${formData.city}, ${formData.state}` : "Fill city/state in Step 1"}
+              label="Location Provided"
+              sublabel={formData.city && formData.state ? `${formData.city}, ${formData.state}` : "Fill city & state in Step 1"}
             />
-            <SecurityCheck
+            <SecurityItem
               done={true}
-              label="Device fingerprint collected"
-              sublabel="Browser device ID captured automatically"
-            />
-            <SecurityCheck
-              done={true}
-              label="Behavioral signals captured"
-              sublabel="Application velocity &amp; session data for ML model"
+              label="Session Active"
+              sublabel="Your login session is authenticated"
             />
           </div>
 
-          <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(59,130,246,0.08)', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)' }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
-              <strong style={{ color: 'var(--info)' }}>ℹ️ How fraud screening works:</strong><br/>
-              Our HistGradientBoosting ML model analyzes behavioral signals — not your credit score — to detect fraud.
-              Your financial details are evaluated <em>separately</em> by the lending team.
+          <div className="info-box">
+            <p>
+              <strong>ℹ️ How fraud screening works:</strong><br />
+              Our ML model analyzes behavioral signals and application patterns to detect fraud.
+              Your financial details are evaluated separately by the lending team.
             </p>
           </div>
         </div>
@@ -421,21 +389,15 @@ function LoanForm() {
   );
 }
 
-function SecurityCheck({ done, label, sublabel }) {
+function SecurityItem({ done, label, sublabel }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-      <span style={{
-        width: "22px", height: "22px", borderRadius: "50%",
-        background: done ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.08)",
-        border: `2px solid ${done ? "var(--success)" : "var(--border-glass)"}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "12px", flexShrink: 0, marginTop: "2px"
-      }}>
+    <div className="security-item">
+      <div className={`security-dot ${done ? "done" : "pending"}`}>
         {done ? "✓" : "○"}
-      </span>
-      <div>
-        <div style={{ fontSize: "13px", fontWeight: 600, color: done ? "var(--text-primary)" : "var(--text-muted)" }}>{label}</div>
-        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{sublabel}</div>
+      </div>
+      <div className="security-text">
+        <div className="label">{label}</div>
+        <div className="sublabel">{sublabel}</div>
       </div>
     </div>
   );

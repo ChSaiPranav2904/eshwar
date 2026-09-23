@@ -39,7 +39,6 @@ export default function Login() {
         : await api.post("/api/auth/login", { username, password });
       login(response.data.token);
       toast.success(mode === "register" ? "Account created!" : "Successfully logged in!");
-      // Decode role from token to decide redirect
       try {
         const payload = JSON.parse(atob(response.data.token.split('.')[1]));
         if (payload.role === 'ROLE_ADMIN') {
@@ -61,7 +60,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="left-panel">
-        <h4>WELCOME TO</h4>
+        <h4>Welcome to</h4>
         <h1>
           Fraud<span>Shield AI</span>
         </h1>
@@ -70,12 +69,14 @@ export default function Login() {
           AI-powered fraud detection and credit evaluation platform built for secure digital lending ecosystems.
         </p>
 
-        <div className="status-box">🟢 AI Risk Engine Active</div>
-        <div className="status-box">🔒 Identity Verification Enabled</div>
-        <div className="status-box">⚡ Real-Time Fraud Scoring</div>
+        <div className="status-list">
+          <div className="status-box">🟢 ML Risk Engine Active</div>
+          <div className="status-box">🔒 Identity Verification Enabled</div>
+          <div className="status-box">📊 Fraud Scoring Pipeline Ready</div>
+        </div>
 
         <div className="quote-card">
-          “Fraud is a tax on all of us. Building systems to prevent it is an investment in a fairer economy.”
+          "Fraud is a tax on all of us. Building systems to prevent it is an investment in a fairer economy."
           <br />
           <strong>— Warren Buffett</strong>
         </div>
@@ -133,23 +134,27 @@ export default function Login() {
             {error && <div className="error-text">{error}</div>}
 
             <button type="submit" disabled={isLoading}>
-              {isLoading ? <div className="spinner" style={{ width: '24px', height: '24px', margin: '0' }}></div> : mode === "register" ? "Sign Up" : "Login"}
+              {isLoading
+                ? <div className="spinner" style={{ width: '20px', height: '20px', margin: 0 }} />
+                : mode === "register" ? "Create Account" : "Sign In"}
             </button>
           </form>
+
+          <hr className="form-divider" />
 
           <button
             type="button"
             className="btn-outline"
-            style={{ width: "100%", marginTop: "16px" }}
+            style={{ width: "100%" }}
             onClick={() => {
               setError("");
               setMode(mode === "register" ? "login" : "register");
             }}
           >
-            {mode === "register" ? "Already have an account? Login" : "New customer? Sign Up"}
+            {mode === "register" ? "Already have an account? Sign In" : "New here? Create Account"}
           </button>
 
-          <div className="footer-text">PEOPLE | DATA | TRUST</div>
+          <div className="footer-text">PEOPLE · DATA · TRUST</div>
         </div>
       </div>
     </div>
